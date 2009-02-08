@@ -34,6 +34,64 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 using namespace epi::error;
 using namespace epi::type;
 
+ErlRef::ErlRef(const char *buf, int *index) throw(EpiEIDecodeException)
+{
+    const char *s = buf + *index;
+    const char *s0 = s;
+    int type = get8(s);
+    
+    switch (type) {
+        case ERL_REFERENCE_EXT: {
+            /* first the nodename */
+            if (get8(s) != ERL_ATOM_EXT)
+                throw EpiEIDecodeException("Error decoding ref's atom", -1);
+
+            int len = get16be(s);
+            mNode.assign(s, len);
+            s += len;
+
+            /* now the numbers: num (4), creation (1) */
+            mCount    = 1;
+            mIds[0]   = get32be(s);
+            mIds[1]   = 0;
+            mIds[2]   = 0;
+            mCreation = get8(s) & 0x03;
+            
+            *index += s-s0;
+            mNewStyle = false;
+            break;
+        }
+        case ERL_NEW_REFERENCE_EXT: {
+            /* first the count */
+            mCount = get16be(s);
+            if (mCount > 3)
+                throw EpiEIDecodeException("Error decoding ref's count (%d)", mCount);
+            /* then the nodename */
+            if (get8(s) != ERL_ATOM_EXT)
+                throw EpiEIDecodeException("Error decoding ref's atom", -1);
+
+            int len = get16be(s);
+            mNode.assign(s, len);
+            s += len;
+
+            /* creation */
+            mCreation = get8(s) & 0x03;
+            
+            /* now the numbers: num (4), creation (1) */
+            /* finally the id integers */
+            for (size_t i = 0; i < 3; i++)
+                mIds[i] = i < mCount ? get32be(s) : 0;
+            
+            *index += s-s0;
+            mNewStyle = true;
+            break;
+        }
+        default:
+            throw EpiEIDecodeException("Error decoding ref's type", type);
+    }
+    mInitialized = true;
+}
+
 void ErlRef::init(const std::string node, const unsigned int ids[],
                   const unsigned  int creation, const bool newStyle)
         throw(EpiBadArgument, EpiAlreadyInitialized)
@@ -77,11 +135,8 @@ bool ErlRef::equals(const ErlTerm &t) const {
         return false;
 
     return (mNode == _t->mNode) &&
-            (mIds[0] == _t->mIds[0]) &&
-            (   !mNewStyle ||
-                ((mIds[1] == _t->mIds[1]) &&
-                 (mIds[2] == _t->mIds[2]))
-                );
+        (mIds[0] == _t->mIds[0]) &&
+        (!mNewStyle || ((mIds[1] == _t->mIds[1]) && (mIds[2] == _t->mIds[2])));
 }
 
 std::string ErlRef::toString(const VariableBinding *binding) const {

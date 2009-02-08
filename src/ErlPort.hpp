@@ -62,6 +62,8 @@ public:
         }
     }
 
+    ErlPort(const char *buf, int *index) throw(EpiEIDecodeException);
+
     /**
      * Init the Port.
      * @param node the nodename.
@@ -117,8 +119,6 @@ public:
 
 private:
     ErlPort(const ErlPort &t) {}
-    inline ~ErlPort() {}
-
 
 protected:
     std::string mNode;

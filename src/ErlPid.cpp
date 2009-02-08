@@ -34,6 +34,25 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 using namespace epi::error;
 using namespace epi::type;
 
+ErlPid::ErlPid(const char *buf, int *index) throw(EpiEIDecodeException)
+{
+    const char* s  = buf + *index;
+    const char* s0 = s;
+    if (get8(s) != ERL_PID_EXT || get8(s) != ERL_ATOM_EXT)
+        throw EpiEIDecodeException("Error decoding pid", -1);
+        
+    int len = get16be(s);
+    /* first assign the nodename */
+    mNode.assign(s, len);
+    s += len;
+    /* now the numbers: num (4), serial (4), creation (1) */
+    mId       = get32be(s) & 0x7fff; /* 15 bits */
+    mSerial   = get32be(s) & 0x1fff; /* 13 bits */
+    mCreation = get8(s) & 0x03; /* 2 bits */
+    *index += s - s0;
+    mInitialized = true;
+}
+
 
 void ErlPid::init(std::string node, int id, int serial, int creation)
         throw(EpiBadArgument, EpiAlreadyInitialized)
@@ -56,9 +75,7 @@ void ErlPid::init(std::string node, int id, int serial, int creation)
     mSerial = serial & 0x1fff ;  // 13 bits
     mCreation = creation & 0x03; // 2 bits
     mInitialized = true;
-
 }
-
 
 bool ErlPid::equals(const ErlTerm &t) const {
     if (!t.instanceOf(ERL_PID))

@@ -178,12 +178,9 @@ int Socket::recv ( std::string& s ) const
 		  std::cout << "status == -1   errno == " << errno << "  in Socket::recv\n";
 		  return 0;
 	 }
-	 else if ( status == 0 )
-	 {
+	 else if ( status == 0 ) {
 		  return 0;
-	 }
-	 else
-	 {
+	 } else {
 		  s = buf;
 		  return status;
 	 }
@@ -237,14 +234,9 @@ void Socket::set_non_blocking ( const bool b )
 	 opts = fcntl ( m_sock, F_GETFL );
 
 	 if ( opts < 0 )
-	 {
 		  return;
-	 }
 
-	 if ( b )
-		  opts = ( opts | O_NONBLOCK );
-	 else
-		  opts = ( opts & ~O_NONBLOCK );
+	 opts = b ? opts | O_NONBLOCK : opts & ~O_NONBLOCK;
 
 	 fcntl ( m_sock, F_SETFL,opts );
 #endif

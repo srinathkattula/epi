@@ -34,6 +34,47 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 using namespace epi::error;
 using namespace epi::type;
 
+ErlString::ErlString(const char* buf, int* index) 
+    throw(EpiEIDecodeException)
+{
+    const char *s = buf + *index;
+    const char *s0 = s;
+    int etype = get8(s);
+
+    switch (etype) {
+        case ERL_STRING_EXT: {
+            int len = get16be(s);
+            mString.assign(s, len);
+            s += len;
+            break;
+        }
+        case ERL_LIST_EXT: {
+            /* Really long strings are represented as lists of small integers.
+             * We don't know in advance if the whole list is small integers,
+             * but we decode as much as we can, exiting early if we run into a
+             * non-character in the list.
+             */
+            int len = get32be(s);
+            mString.reserve(len);
+            for (int i=0; i<len; i++) {
+                if ((etype = get8(s)) != ERL_SMALL_INTEGER_EXT)
+                    throw EpiEIDecodeException("Error decoding string", s+i-s0);
+                mString.at(i) = get8(s);
+            }
+            break;
+        }
+        case ERL_NIL_EXT:
+            mString.erase();
+            break;
+
+        default:
+            throw EpiEIDecodeException("Error decoding string type", etype);
+    }
+
+    *index += s-s0;
+    mInitialized = true;
+}
+
 std::string ErlString::stringValue() const
         throw(EpiInvalidTerm)
 {

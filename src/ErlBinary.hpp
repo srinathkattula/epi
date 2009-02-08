@@ -60,6 +60,7 @@ public:
         }
     }
 
+    ErlBinary(const char* buf, int* index) throw(EpiEIDecodeException);
 
     /**
      * Init this binary with the given value.

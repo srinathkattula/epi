@@ -43,8 +43,10 @@ public:
     /**
      * Create a unitialized Ref
      */
-    inline ErlRef():ErlTerm() {};
+    ErlRef(): ErlTerm() {};
 
+    ErlRef(const char *buf, int *index) throw(EpiEIDecodeException);
+    
     /**
      * Create an Erlang ref from its components.
      * If node string size is greater than MAX_NODE_LENGTH or = 0,
@@ -148,10 +150,10 @@ private:
 
 protected:
     std::string mNode;
+    unsigned int mCount;
     unsigned int mIds[3];
     unsigned int mCreation;
     bool mNewStyle;
-
 };
 
 } //namespace type

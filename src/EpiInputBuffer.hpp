@@ -41,7 +41,7 @@ namespace node {
  */
 class InputBuffer: public Buffer {
 public:
-    inline virtual ~InputBuffer() {};
+    virtual ~InputBuffer() {};
     /**
      * Deserialize the next term in the buffer
      * @returns a pointer to a new ErlTerm. 0 if there are no terms
