@@ -34,6 +34,25 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 using namespace epi::error;
 using namespace epi::type;
 
+ErlPort::ErlPort(const char *buf, int *index) throw(EpiEIDecodeException)
+{
+    const char* s  = buf + *index;
+    const char* s0 = s;
+    /* first the nodename */
+    if (get8(s) != ERL_PORT_EXT || get8(s) != ERL_ATOM_EXT)
+        throw EpiEIDecodeException("Error decoding port", -1);
+    
+    int len = get16be(s);
+    mNode.assign(s, len);
+    s += len;
+
+    /* now the numbers: num (4), creation (1) */
+    mId       = get32be(s) & 0x0fffffff /* 28 bits */;
+    mCreation = get8(s) & 0x03; /* 2 bits */
+    *index += s - s0;
+    mInitialized = true;
+}
+
 void ErlPort::init(const std::string node, const int id,
                    const int creation)
        throw(EpiBadArgument, EpiAlreadyInitialized)

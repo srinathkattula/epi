@@ -19,18 +19,18 @@ OBJDIR        = ../obj.$(ARCHITECTURE)
 
 LDFLAGS = -L$(ERL_INTERFACE)/lib -L$(BOOST)/lib -lei -lpthread -lboost_thread-gcc32-mt
 
-CPPFLAGS = -DUSE_BOOST -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include
+CPPFLAGS = -Wall -DUSE_BOOST -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include
 
-SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp EIInputBuffer.cpp \
-        EIOutputBuffer.cpp EITransport.cpp EpiAutoNode.cpp EpiBuffer.cpp \
-        EpiConnection.cpp EpiException.cpp EpiLocalNode.cpp EpiMailBox.cpp \
+SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp EpiBuffer.cpp \
         EpiMessage.cpp EpiNode.cpp EpiObserver.cpp EpiReceiver.cpp EpiSender.cpp \
         EpiUtil.cpp ErlAtom.cpp ErlBinary.cpp ErlConsList.cpp ErlDouble.cpp \
         ErlEmptyList.cpp ErlList.cpp ErlLong.cpp ErlPid.cpp ErlPort.cpp \
         ErlRef.cpp ErlString.cpp ErlTerm.cpp ErlTermFormat.cpp ErlTuple.cpp \
+        EIOutputBuffer.cpp EITransport.cpp EpiAutoNode.cpp \
+        EpiConnection.cpp EpiException.cpp EpiLocalNode.cpp EpiMailBox.cpp \
         ErlVariable.cpp ErlangTransportManager.cpp \
         GenericQueue.cpp MatchingCommandGuard.cpp PatternMatchingGuard.cpp \
-        PlainBuffer.cpp Socket.cpp VariableBinding.cpp
+        PlainBuffer.cpp Socket.cpp VariableBinding.cpp EIInputBuffer.cpp
 
 ifdef DEBUG
 SOURCES  += Debug.cpp
@@ -93,3 +93,6 @@ info:
 clean:
 	rm -f $(ALL_OBJECTS) $(LIBDIR)/libepi.a $(LIBDIR)/libepi.so
 	rm -fr $(TARGET_DIRS)
+
+test_type:
+	LD_LIBRARY_PATH=$(BOOST)/lib:$$LD_LIBRARY_PATH ../erlTypesTest

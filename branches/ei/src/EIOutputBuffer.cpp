@@ -24,8 +24,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "Config.hpp"
 
-#include "EIOutputBuffer.hpp"
 #include "EIInputBuffer.hpp"
+#include "EIOutputBuffer.hpp"
 #include "ErlTypes.hpp"
 #include "EpiUtil.hpp"
 

@@ -192,7 +192,7 @@ public:
     virtual inline ~EpiEIDecodeException() throw() {}
 
 private:
-        int mEiErrorCode;
+    int mEiErrorCode;
 };
 
 /**

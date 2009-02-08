@@ -42,7 +42,7 @@ public:
     /**
      * Create an unitialized (and invalid) atom
      */
-    inline ErlAtom():ErlTerm() {}
+    ErlAtom(): ErlTerm() {}
 
     /**
      * Create an atom from the given string.
@@ -58,6 +58,8 @@ public:
         } catch (EpiAlreadyInitialized&) {
         }
     }
+
+    ErlAtom(const char* buf, int* index) throw(EpiEIDecodeException);
 
     /**
      * Init this atom with the given string.
@@ -77,8 +79,7 @@ public:
      * Get the actual string contained in this term.
      * @throws EpiInvalidTerm if the term is invalid
      */
-    std::string atomValue() const
-            throw(EpiInvalidTerm);
+    std::string atomValue() const throw(EpiInvalidTerm);
 
     bool equals(const ErlTerm &t) const;
 
@@ -87,9 +88,6 @@ public:
     IMPL_TYPE_SUPPORT(ErlAtom, ERL_ATOM);
 
 private:
-    inline ~ErlAtom() {
-	}
-
     // Private constructor
     ErlAtom(const ErlAtom&) {}
 

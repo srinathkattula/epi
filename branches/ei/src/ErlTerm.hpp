@@ -29,8 +29,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <vector>
 #include <memory> 
 
+#include <ei.h>
 #include "EpiError.hpp" 
 #include "ErlTermImpl.hpp"
+#include "putget.h"
 
 #ifdef _WIN32
 #pragma warning( disable : 4290 )

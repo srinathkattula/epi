@@ -41,7 +41,9 @@ public:
     /**
      * Create a unitialized Pid
      */
-    inline ErlPid():ErlTerm() { }
+    ErlPid(): ErlTerm() { }
+
+    ErlPid(const char *buf, int *index) throw(EpiEIDecodeException);
 
     /**
      * Create an Erlang pid from its components.
@@ -86,36 +88,28 @@ public:
      *
      * @return the node name from the PID.
      **/
-    inline std::string node() const {
-        return mNode;
-    }
+    inline std::string node() const { return mNode; }
 
     /**
      * Get the id number from the PID.
      *
      * @return the id number from the PID.
      **/
-    inline int id() const {
-        return mId;
-    }
+    inline int id() const { return mId; }
 
     /**
      * Get the serial number from the PID.
      *
      * @return the serial number from the PID.
      **/
-    inline int serial() const {
-        return mSerial;
-    }
+    inline int serial() const { return mSerial; }
 
     /**
      * Get the creation number from the PID.
      *
      * @return the creation number from the PID.
      **/
-    inline int creation() const {
-        return mCreation;
-    }
+    inline int creation() const { return mCreation; }
 
     bool equals(const ErlTerm &t) const;
 
@@ -130,15 +124,9 @@ public:
 
 private:
     ErlPid(const ErlPid &t) {}
-    inline ~ErlPid() { }
 
-
-protected:
     std::string mNode;
-    int mId;
-    int mSerial;
-    int mCreation;
-
+    int mId, mSerial, mCreation;
 };
 
 /** less operator, needed for maps */

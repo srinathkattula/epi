@@ -44,9 +44,11 @@ class EIInputBuffer: public epi::node::InputBuffer, public EIBuffer {
     friend class EIOutputBuffer;
 public:
 
-    EIInputBuffer(const bool with_version=true);
+    EIInputBuffer(const bool with_version=true)
+        : EIBuffer(with_version), mDecodeIndex(mBuffer.index)
+    {}
 
-    virtual ~EIInputBuffer();
+    virtual ~EIInputBuffer() {}
 
     virtual ErlTerm* readTerm() throw(EpiDecodeException);
 
@@ -54,11 +56,13 @@ public:
     void resetIndex()   { do_resetIndex(); }
 
 protected:
-    EIInputBuffer(ei_x_buff &buffer, const bool with_version);
+    EIInputBuffer(ei_x_buff &buffer, const bool with_version)
+        : EIBuffer(buffer, with_version), mDecodeIndex(mBuffer.index)
+    {}
 
     int mDecodeIndex;
 
-    int *getDecodeIndex();
+    int *getDecodeIndex() { return &mDecodeIndex; }
 };
 
 }

@@ -55,6 +55,8 @@ public:
         }
     }
 
+    ErlString(const char* buf, int* index) throw(EpiEIDecodeException);
+
     /**
      * Init this string with the given string.
      *

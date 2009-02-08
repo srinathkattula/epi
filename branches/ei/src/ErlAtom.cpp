@@ -35,13 +35,25 @@ using namespace epi::error;
 using namespace epi::type;
 
 
+ErlAtom::ErlAtom(const char* buf, int* index) throw(EpiEIDecodeException) 
+{
+    const char *s = buf + *index;
+    const char *s0 = s;
+
+    if (get8(s) != ERL_ATOM_EXT)
+        throw EpiEIDecodeException("Error decoding atom", *index);
+    int len = get16be(s);
+    mAtom.assign(s, len);
+    *index += s + len - s0;
+    mInitialized = true;
+}
+
 void ErlAtom::init(const std::string &atom)
         throw (EpiBadArgument,
                EpiAlreadyInitialized)
 {
-    if (isValid()) {
+    if (isValid()) 
         throw EpiAlreadyInitialized("Atom already initialized");
-    }
 
     if (atom.length() > MAX_ATOM_LENGTH) {
         std::ostringstream oss;
@@ -53,14 +65,10 @@ void ErlAtom::init(const std::string &atom)
 
     mAtom = atom;
     mInitialized = true;
-
 }
 
 bool ErlAtom::equals(const ErlTerm &t) const {
-    if (!t.instanceOf(ERL_ATOM))
-        return false;
-
-    if (!this->isValid() || !t.isValid())
+    if (!t.instanceOf(ERL_ATOM) || !this->isValid() || !t.isValid())
         return false;
 
     ErlAtom *_t = (ErlAtom*) &t;

@@ -35,6 +35,25 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 using namespace epi::error;
 using namespace epi::type;
 
+ErlBinary::ErlBinary(const char* buf, int* index) 
+    throw(EpiEIDecodeException)
+{
+    const char *s = buf + *index;
+    const char *s0 = s;
+
+    if (get8(s) != ERL_BINARY_EXT)
+        throw EpiEIDecodeException("Error decoding binary", *index);
+
+    long len = get32be(s);
+    mData = new char[len];
+    if (!mData)
+        throw EpiEIDecodeException("Error decoding binary - out of memory", len);
+    ::memmove(mData,s,len);
+
+    *index += s + len - s0;
+    mInitialized = true;
+}
+
 void ErlBinary::init(const void *data, const int size,
                 const bool copy, const bool del)
         throw(EpiAlreadyInitialized)
