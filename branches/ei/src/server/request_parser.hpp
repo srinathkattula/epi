@@ -8,89 +8,76 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef HTTP_REQUEST_PARSER_HPP
-#define HTTP_REQUEST_PARSER_HPP
+#ifndef _REQUEST_PARSER_HPP_
+#define _REQUEST_PARSER_HPP_
 
-#include <boost/logic/tribool.hpp>
+#include <algorithm>
 #include <boost/tuple/tuple.hpp>
+#include <assert.h>
+#include "../putget.h"
+#include "request.hpp"
 
 namespace ei {
 namespace server {
 
-struct request;
-
 /// Parser for incoming requests.
+template <class request>
 class request_parser
 {
 public:
-  /// Construct ready to parse the request method.
-  request_parser();
+    /// Construct ready to parse the request method.
+    request_parser()
+        : m_len(0)
+        , m_offset(0)
+    {}
+    
+    /// Reset to initial parser state.
+    void reset() { m_len = m_offset = 0; }
 
-  /// Reset to initial parser state.
-  void reset();
-
-  /// Parse some data. The tribool return value is true when a complete request
-  /// has been parsed, false if the data is invalid, indeterminate when more
-  /// data is required. The InputIterator return value indicates how much of the
-  /// input has been consumed.
-  template <typename InputIterator>
-  boost::tuple<boost::tribool, InputIterator> parse(request& req,
-      InputIterator begin, InputIterator end)
-  {
-    while (begin != end)
-    {
-      boost::tribool result = consume(req, *begin++);
-      if (result || !result)
-        return boost::make_tuple(result, begin);
-    }
-    boost::tribool result = boost::indeterminate;
-    return boost::make_tuple(result, begin);
-  }
+    /// Parse some data. The bool return value is true when a complete request
+    /// has been parsed, false when more data is required. The <data> and <len> 
+    /// return value indicates how much of the input has been consumed.
+    bool parse(request& req, char*& data, size_t& len);
 
 private:
-  /// Handle the next character of input.
-  boost::tribool consume(request& req, char input);
-
-  /// Check if a byte is an HTTP character.
-  static bool is_char(int c);
-
-  /// Check if a byte is an HTTP control character.
-  static bool is_ctl(int c);
-
-  /// Check if a byte is defined as an HTTP tspecial character.
-  static bool is_tspecial(int c);
-
-  /// Check if a byte is a digit.
-  static bool is_digit(int c);
-
-  /// The current state of the parser.
-  enum state
-  {
-    method_start,
-    method,
-    uri_start,
-    uri,
-    http_version_h,
-    http_version_t_1,
-    http_version_t_2,
-    http_version_p,
-    http_version_slash,
-    http_version_major_start,
-    http_version_major,
-    http_version_minor_start,
-    http_version_minor,
-    expecting_newline_1,
-    header_line_start,
-    header_lws,
-    header_name,
-    space_before_header_value,
-    header_value,
-    expecting_newline_2,
-    expecting_newline_3
-  } state_;
+    size_t m_len, m_offset;
+    char   m_temp_buf[8];
 };
+
+
+template <class request>
+bool request_parser<request>::parse(request& req, char*& data, size_t& len)
+{
+    if (m_len == 0) {
+        int sz = std::min(4 - m_offset, len);
+        assert( sz >= 0 );
+        
+        memcpy(m_temp_buf + m_offset, data, sz);
+        m_offset += sz;
+        len      -= sz;
+        data     += sz;
+
+        if (m_offset == 4) {
+            const char* s = m_temp_buf;
+            m_len    = get32be(s);
+            m_offset = 0;
+            req.init(m_len, data, len);
+        } else {
+            return false;
+        }
+    } else {
+        req.copy(data, len);
+    }
+
+    bool result = req.full();
+
+    if (result)
+        m_len = 0;
+    
+    return result;
+}
 
 } // namespace server
 } // namespace ei
 
-#endif // HTTP_REQUEST_PARSER_HPP
+#endif // _REQUEST_PARSER_HPP_

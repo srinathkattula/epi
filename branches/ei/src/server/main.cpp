@@ -14,6 +14,10 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include "server.hpp"
+#include "request.hpp"
+
+typedef ei::server::request< std::allocator<char> > RequestT;
+typedef ei::server::server< RequestT > ServerT;
 
 #if defined(_WIN32)
 
@@ -46,20 +50,24 @@ int main(int argc, char* argv[])
   try
   {
     // Check command line arguments.
-    if (argc != 4)
+    if (argc != 3)
     {
-      std::cerr << "Usage: http_server <address> <port> <doc_root>\n";
+      std::string s(argv[0]);
+      size_t n = s.find_last_of('/');
+      if (n != std::string::npos)
+        s.erase(0, n+1);
+      std::cerr << "Usage: " << s << " <address> <port> <doc_root>\n";
       std::cerr << "  For IPv4, try:\n";
-      std::cerr << "    receiver 0.0.0.0 80 .\n";
+      std::cerr << "    " << s << " 0.0.0.0 8000\n";
       std::cerr << "  For IPv6, try:\n";
-      std::cerr << "    receiver 0::0 80 .\n";
+      std::cerr << "    " << s << " 0::0 8000\n";
       return 1;
     }
 
 #if defined(_WIN32)
 
     // Initialise server.
-    ei::server::server s(argv[1], argv[2], argv[3]);
+    ServerT s(argv[1], argv[2]);
 
     // Set console control handler to allow server to be stopped.
     console_ctrl_function = boost::bind(&ei::server::server::stop, &s);
@@ -77,8 +85,8 @@ int main(int argc, char* argv[])
     pthread_sigmask(SIG_BLOCK, &new_mask, &old_mask);
 
     // Run server in background thread.
-    ei::server::server s(argv[1], argv[2], argv[3]);
-    boost::thread t(boost::bind(&ei::server::server::run, &s));
+    ServerT s(argv[1], argv[2]);
+    boost::thread t(boost::bind(&ServerT::run, &s));
 
     // Restore previous signals.
     pthread_sigmask(SIG_SETMASK, &old_mask, 0);
@@ -96,8 +104,9 @@ int main(int argc, char* argv[])
     // Stop the server.
     s.stop();
     t.join();
-
+    
 #endif
+    std::cout << "Server stopped" << std::endl;
   }
   catch (std::exception& e)
   {
