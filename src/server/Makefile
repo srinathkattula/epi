@@ -17,7 +17,7 @@ LIBDIR        = ../../lib.$(ARCHITECTURE)
 OBJDIR        = ../../obj.$(ARCHITECTURE)
 
 LDFLAGS = -L$(ERL_INTERFACE)/lib -L$(BOOST)/lib \
-          -lei -lpthread -lboost_thread-gcc32-mt -lboost_system-gcc32-mt
+          -lei -lpthread $(BOOST)/lib/libboost_thread-gcc32-mt.a $(BOOST)/lib/libboost_system-gcc32-mt.a
 
 CPPFLAGS = -Wall -DUSE_BOOST -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include -DSRV_DEBUG
 

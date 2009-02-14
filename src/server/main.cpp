@@ -17,7 +17,8 @@
 #include "request.hpp"
 
 typedef ei::server::request< std::allocator<char> > RequestT;
-typedef ei::server::server< RequestT > ServerT;
+
+using namespace ei::server;
 
 #if defined(_WIN32)
 
@@ -43,51 +44,18 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl_type)
 #include <pthread.h>
 #include <signal.h>
 
-#endif // !defined(_WIN32)
-
-int main(int argc, char* argv[])
+sigset_t block_all_signals()
 {
-  try
-  {
-    // Check command line arguments.
-    if (argc != 3)
-    {
-      std::string s(argv[0]);
-      size_t n = s.find_last_of('/');
-      if (n != std::string::npos)
-        s.erase(0, n+1);
-      std::cerr << "Usage: " << s << " <address> <port> <doc_root>\n";
-      std::cerr << "  For IPv4, try:\n";
-      std::cerr << "    " << s << " 0.0.0.0 8000\n";
-      std::cerr << "  For IPv6, try:\n";
-      std::cerr << "    " << s << " 0::0 8000\n";
-      return 1;
-    }
-
-#if defined(_WIN32)
-
-    // Initialise server.
-    ServerT s(argv[1], argv[2]);
-
-    // Set console control handler to allow server to be stopped.
-    console_ctrl_function = boost::bind(&ei::server::server::stop, &s);
-    SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
-
-    // Run the server until stopped.
-    s.run();
-
-#else
-    
     // Block all signals for background thread.
     sigset_t new_mask;
     sigfillset(&new_mask);
     sigset_t old_mask;
     pthread_sigmask(SIG_BLOCK, &new_mask, &old_mask);
+    return old_mask;
+}
 
-    // Run server in background thread.
-    ServerT s(argv[1], argv[2]);
-    boost::thread t(boost::bind(&ServerT::run, &s));
-
+void restore_sig_and_wait(sigset_t& old_mask)
+{
     // Restore previous signals.
     pthread_sigmask(SIG_SETMASK, &old_mask, 0);
 
@@ -100,18 +68,93 @@ int main(int argc, char* argv[])
     pthread_sigmask(SIG_BLOCK, &wait_mask, 0);
     int sig = 0;
     sigwait(&wait_mask, &sig);
+}
 
-    // Stop the server.
-    s.stop();
-    t.join();
+#endif // !defined(_WIN32)
+
+int main(int argc, char* argv[])
+{
+    bool use_pipe = false;
+    std::string addr("0.0.0.0");
+    std::string port;
     
-#endif
-    std::cout << "Server stopped" << std::endl;
-  }
-  catch (std::exception& e)
-  {
-    std::cerr << "exception: " << e.what() << "\n";
-  }
+    try
+    {
+        // Check command line arguments.
+        for (int i=1; i < argc; i++) {
+            if (strcmp(argv[i], "-pipe") == 0)
+                use_pipe = true;
+            else if (strcmp(argv[i], "-a") == 0 && i+1 < argc && argv[i+1][0] != '-')
+                addr = argv[++i];
+            else if (strcmp(argv[i], "-p") == 0 && i+1 < argc && argv[i+1][0] != '-')
+                port = argv[++i];
+        }
+                
+        if (!use_pipe && port.empty())
+        {
+            std::string s(argv[0]);
+            size_t n = s.find_last_of('/');
+            if (n != std::string::npos)
+                s.erase(0, n+1);
+            std::cerr << "Usage: " << s << " [-pipe] [-a <address>] [-p <port>]\n"
+                      << "  Either -pipe or -p option is required" << std::endl;
+            return 1;
+        }
 
-  return 0;
+#if defined(_WIN32)
+
+        // Initialise server.
+        if (use_pipe) {
+            pipe_server<RequestT> s(3, 4);
+
+            // Set console control handler to allow server to be stopped.
+            console_ctrl_function = boost::bind(&pipe_server<RequestT>::stop, &s);
+            SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+
+            // Run the server until stopped.
+            s.run();
+        } else {
+            tcp_server<RequestT> s(addr, port);
+
+            // Set console control handler to allow server to be stopped.
+            console_ctrl_function = boost::bind(&tcp_server<RequestT>::stop, &s);
+            SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+
+            // Run the server until stopped.
+            s.run();
+        }
+#else
+
+        sigset_t old_mask = block_all_signals();
+        
+        if (use_pipe) {
+            // Run server in background thread.
+            pipe_server<RequestT> s(3, 4);
+            boost::thread t(boost::bind(&pipe_server<RequestT>::run, &s));
+
+            restore_sig_and_wait(old_mask);
+            
+            // Stop the server.
+            s.stop();
+            t.join();
+        } else {
+            // Run server in background thread.
+            tcp_server<RequestT> s(addr, port);
+            boost::thread t(boost::bind(&tcp_server<RequestT>::run, &s));
+
+            restore_sig_and_wait(old_mask);
+            
+            // Stop the server.
+            s.stop();
+            t.join();
+        }
+#endif
+        std::cout << "Server stopped" << std::endl;
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "exception: " << e.what() << "\n";
+    }
+
+    return 0;
 }
