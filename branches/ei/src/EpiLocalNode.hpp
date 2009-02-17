@@ -38,17 +38,6 @@ namespace node {
 class LocalNode: public AbstractNode {
 public:
     /**
-     * Create a new node, using default cookie an any port
-     * @param aNodeId node identifier with the protocol, alivename,
-     *  hostname and port. ex: "ei:mynode@host.somewhere.com:3128"
-     * @throws EpiBadArgument if node name is too long
-     * @throws EpiConnectionException if there is a network problem
-     * @throws EpiException if there is an error in transport creation
-     */
-    LocalNode(const std::string aNodeId)
-            throw (EpiBadArgument, EpiConnectionException, EpiException);
-
-    /**
      * Create a new node, using given cookie
      * @param aNodeId node identifier with the protocol, alivename,
      *  hostname and port. ex: "ei:mynode@host.somewhere.com:3128"
@@ -57,7 +46,7 @@ public:
      * @throws EpiConnectionException if there is a network problem
      * @throws EpiException if there is an error in transport creation
      */
-    LocalNode(const std::string aNodeId, const std::string aCookie)
+    LocalNode(const std::string& aNodeId, const std::string& aCookie = "")
             throw (EpiBadArgument, EpiConnectionException, EpiException);
 
     /**
@@ -68,8 +57,8 @@ public:
      * @throws EpiBadArgument if node name is too long
      * @throws EpiConnectionException if there is a network problem
      */
-    LocalNode(const std::string aNodeName,
-              const std::string aCookie,
+    LocalNode(const std::string& aNodeName,
+              const std::string& aCookie,
               ErlangTransport *transport)
             throw (EpiBadArgument, EpiConnectionException);
 
@@ -102,22 +91,13 @@ public:
     }
 
     /**
-     * Set up a connection to an Erlang node, using the default cookie
-     * @param node node name to connect
-     * @returns A new connection. The connection has no receiver defined
-     * and is not started.
-     */
-    Connection* connect(const std::string node)
-            throw(EpiConnectionException);
-
-    /**
      * Set up a connection to an Erlang node, using other cookie
      * @param node node name to connect
      * @param cookie cookie to use
      * @returns A new connection. The connection has no receiver defined
      * and is not started.
      */
-    Connection* connect(const std::string node, const std::string cookie)
+    Connection* connect(const std::string& node, const std::string& cookie = "")
             throw(EpiConnectionException);
 
     /**
@@ -137,7 +117,7 @@ public:
      * @returns A new connection. The connection has no receiver defined
      * and is not started. returns 0 if timeout.
      */
-    Connection* accept(const std::string cookie, long timeout = 0)
+    Connection* accept(const std::string& cookie, long timeout = 0)
             throw(EpiConnectionException);
 
     /**
@@ -169,8 +149,8 @@ protected:
      * Init counters for pids, ports and refs and the ErlangTransport
      * to use
      */
-    void init(const std::string aNodeId,
-              const std::string aCookie,
+    void init(const std::string& aNodeId,
+              const std::string& aCookie,
               ErlangTransport *transport)
             throw (EpiException);
 

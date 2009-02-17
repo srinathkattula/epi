@@ -30,14 +30,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <list>
 #include <functional>
 
-#ifdef USE_OPEN_THREADS
-#include "OpenThreads/Thread"
-#include "OpenThreads/Mutex"
-#elif USE_BOOST
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/shared_ptr.hpp>
-#endif
 
 #include "EpiException.hpp"
 #include "ErlTypes.hpp"
@@ -84,11 +79,7 @@ using namespace epi::error;
  * manually or through some other means. See the Erlang documentation
  * for more information about this.
  **/
-class AutoNode: public LocalNode, public EpiReceiver,
-                public EpiSender
-                #ifdef USE_OPEN_THREADS
-                , public OpenThreads::Thread
-                #endif
+class AutoNode: public LocalNode, public EpiReceiver, public EpiSender
 {
     /*
      * Necessary to allow do hashmap on ErlPidPtr :-P
@@ -114,22 +105,13 @@ class AutoNode: public LocalNode, public EpiReceiver,
 
 public:
     /**
-     * Create a new node, using default cookie an any port
-     * @param aNodeName node name
-     * @throws EpiBadArgument if node name is too long
-     * @throws EpiConnectionException if there is a network problem
-     */
-    AutoNode(const std::string aNodeName)
-            throw (EpiBadArgument, EpiConnectionException);
-
-    /**
      * Create a new node, using given cookie
      * @param aNodeName node name
      * @param cookie cookie to use
      * @throws EpiBadArgument if node name is too long
      * @throws EpiConnectionException if there is a network problem
      */
-    AutoNode(const std::string aNodeName, const std::string aCookie)
+    AutoNode(const std::string& aNodeName, const std::string& aCookie = "")
             throw (EpiBadArgument, EpiConnectionException);
 
     /**
@@ -140,8 +122,7 @@ public:
      * @throws EpiBadArgument if node name is too long
      * @throws EpiConnectionException if there is a network problem
      */
-    AutoNode(const std::string aNodeName,
-             const std::string aCookie,
+    AutoNode(const std::string& aNodeName, const std::string& aCookie,
              ErlangTransport *transport)
             throw (EpiBadArgument, EpiConnectionException);
 
@@ -172,12 +153,12 @@ public:
      * Register an MailBox with given name. MailBox must be associated
      * to this node.
      */
-    void registerMailBox(const std::string name, MailBox *mailbox);
+    void registerMailBox(const std::string& name, MailBox *mailbox);
 
     /**
      * Unregister a name for a mailbox
      */
-    void unRegisterMailBox(const std::string name);
+    void unRegisterMailBox(const std::string& name);
 
     /**
      * Unregister all names for this mailbox
@@ -230,7 +211,7 @@ public:
 	* was returned. false if the correct response was not returned on
 	* time.
 	**/
-	bool ping(const std::string remoteNode, long timeout);
+	bool ping(const std::string& remoteNode, long timeout);
 
     /**
      * Deliver incoming message
@@ -258,7 +239,7 @@ public:
      * Send a buffer to a registered server.
      */
     void sendBuf( epi::type::ErlPid* from,
-                  const std::string &to,
+                  const std::string& to,
                   epi::node::OutputBuffer* buffer )
             throw (epi::error::EpiConnectionException);
 
@@ -266,8 +247,8 @@ public:
      * Send a buffer to a registered server in the given node
      */
     void sendBuf( epi::type::ErlPid* from,
-                  const std::string &node,
-                  const std::string &to,
+                  const std::string& node,
+                  const std::string& to,
                   epi::node::OutputBuffer* buffer )
             throw (epi::error::EpiConnectionException);
 
@@ -304,7 +285,7 @@ protected:
     /**
      * Get connection by node name from internal map
      */
-    Connection* getConnection(std::string name);
+    Connection* getConnection(const std::string& name);
 
     /**
      * Add a connection to the map of Connections. This node will be
@@ -335,7 +316,7 @@ protected:
      * Get the connection for given name. If no connection exists,
      * try to setup a connection, adding it to the map
      */
-    Connection *attempConnection(std::string name)
+    Connection *attempConnection(const std::string& name)
             throw (EpiConnectionException);
 
 
@@ -343,12 +324,6 @@ private:
 
     bool mThreadExit;
 
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::Mutex _connectionsMutex;
-    OpenThreads::Mutex _mailboxesMutex;
-    OpenThreads::Mutex _regmailboxesMutex;
-    OpenThreads::Mutex _socketMutex;
-    #elif USE_BOOST
     boost::shared_ptr<boost::thread> m_thread;
     bool m_threadRunning;
     boost::mutex _connectionsMutex;
@@ -358,7 +333,6 @@ private:
 
     bool isRunning() const { return m_threadRunning > 0; }
     void join() { m_thread->join(); }
-    #endif
     
     mailbox_map mMailBoxes;
     connection_map mConnections;
@@ -376,27 +350,6 @@ private:
     void destroyMailBoxes();
 
 };
-
-#if 0
-/*
-Look!! That's a dog!
-
-              .--.             .---.
-             /:.  '.         .' ..  '._.---.
-            /:::-.  \.-"""-;` .-:::.     .::\
-           /::'|  `\/  _ _  \'   `\:'   ::::|
-       __.'    |   /  (o|o)  \     `'.   ':/
-      /    .:. /   |   ___   |        '---'
-     |    ::::'   /:  (._.) .:\
-     \    .='    |:'        :::|
-      `""`       \     .-.   ':/
-            jgs   '---`|I|`---'
-                       '-'
-
-
-    :-m
-*/
-#endif
 
 } // node
 } // epi

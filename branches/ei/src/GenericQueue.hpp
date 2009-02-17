@@ -27,17 +27,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <list>
 
-#ifdef USE_OPEN_THREADS
-#include <OpenThreads/Barrier>
-#include <OpenThreads/Thread>
-#include <OpenThreads/Mutex>
-#include <OpenThreads/ScopedLock>
-#include <OpenThreads/Condition>
-#elif USE_BOOST
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
-#endif
 
 /**
  * Predicate to explore the queue.
@@ -126,18 +118,9 @@ private:
     T* tryGet();
     element_list mList;
 
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::Mutex _queueMutex;
-    OpenThreads::Condition _queueCondition;
-	#elif USE_BOOST
 	boost::mutex _queueMutex;
 	boost::condition _queueCondition;
-	#endif
 };
-
-#ifdef USE_OPEN_THREADS
-long currentTimeMillis(void);
-#endif
 
 template <class T>
 T* GenericQueue<T>::tryGet( ) {
@@ -153,19 +136,11 @@ T* GenericQueue<T>::tryGet( ) {
 
 template <class T>
 T* GenericQueue<T>::get( ) {
-	#ifdef USE_OPEN_THREADS
-	OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-	#elif USE_BOOST
 	boost::mutex::scoped_lock lock(_queueMutex);
-	#endif
 
     T* elem;
     while ((elem = tryGet()) == 0) {
-    	#ifdef USE_OPEN_THREADS
-        _queueCondition.wait(&_queueMutex);
-	    #elif USE_BOOST
         _queueCondition.wait(_queueMutex);
-	    #endif
     }
     return elem;
 }
@@ -174,36 +149,20 @@ T* GenericQueue<T>::get( ) {
 template <class T>
         T* GenericQueue<T>::get(long timeout)
 {
-	#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-    long currentTime = currentTimeMillis();
-    long stopTime = currentTime + timeout;
-	#elif USE_BOOST
 	boost::mutex::scoped_lock lock(_queueMutex);
     boost::system_time currentTime = boost::get_system_time();
     boost::posix_time::milliseconds const delay(timeout);
     boost::system_time const stopTime = currentTime + delay;
-	#endif
     T* elem;
 
     while ((elem = tryGet()) == 0) {
-        #ifdef USE_OPEN_THREADS
-        currentTime = currentTimeMillis();
-		#elif USE_BOOST
         currentTime = boost::get_system_time();
-		#endif
         if (stopTime < currentTime) {
 			return 0;
         }
-		#ifdef USE_OPEN_THREADS
-        if (_queueCondition.wait(&_queueMutex, stopTime-currentTime) != 0) {
-			return 0;
-        }
-		#elif USE_BOOST
         if (_queueCondition.timed_wait(_queueMutex, stopTime) != 0) {
 			return 0;
         }
-		#endif
     }
     return elem;
 }
@@ -211,11 +170,7 @@ template <class T>
 template <class T>
 T* GenericQueue<T>::get(QueueGuard *guard)
 {
-	#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-	#elif USE_BOOST
 	boost::mutex::scoped_lock lock(_queueMutex);
-	#endif
 
 	while (true) {
         // Iterate the list
@@ -229,13 +184,8 @@ T* GenericQueue<T>::get(QueueGuard *guard)
 
         // No element complaints
         // Give oportunity to other
-		#ifdef USE_OPEN_THREADS
-        _queueCondition.signal();
-        _queueCondition.wait(&_queueMutex);
-		#elif USE_BOOST
         _queueCondition.notify_one();
         _queueCondition.wait(_queueMutex);
-		#endif
         // Sleep
     }
 }
@@ -243,17 +193,10 @@ T* GenericQueue<T>::get(QueueGuard *guard)
 template <class T>
 T* GenericQueue<T>::get(QueueGuard *guard, long timeout)
 {
-	#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-	long currentTime = currentTimeMillis();
-    long stopTime = currentTime + timeout;
-
-	#elif USE_BOOST
 	boost::mutex::scoped_lock lock(_queueMutex);
     boost::system_time currentTime = boost::get_system_time();
     boost::posix_time::milliseconds const delay(timeout);
     boost::system_time const stopTime = currentTime + delay;
-	#endif
 
     while (true) {
         // Iterate the list
@@ -267,67 +210,37 @@ T* GenericQueue<T>::get(QueueGuard *guard, long timeout)
         }
         // No element complaints
         // Give oportunity to other
-		#ifdef USE_OPEN_THREADS
-        _queueCondition.signal();
-        currentTime = currentTimeMillis();
-		#elif USE_BOOST
         _queueCondition.notify_one();
         currentTime = boost::get_system_time();
-		#endif
 
         if (stopTime < currentTime) {
 			return 0;
         }
-		#ifdef USE_OPEN_THREADS
-        if (_queueCondition.wait(&_queueMutex, stopTime-currentTime) != 0) {
-			return 0; 
-        }
-		#elif USE_BOOST
         if (_queueCondition.timed_wait(_queueMutex, stopTime) != 0) {
 			return 0; 
         }
-		#endif
     }
 }
 
 
-template <class T>
-int GenericQueue<T>::count() {
-	#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-	#elif USE_BOOST
+template <class T> int GenericQueue<T>::count() {
 	boost::mutex::scoped_lock lock(_queueMutex);
-	#endif
-
     return mList.size();
 }
 
-template <class T>
-        void GenericQueue<T>::put(T* element)
+template <class T> void GenericQueue<T>::put(T* element)
 {
-	#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_queueMutex);
-	#elif USE_BOOST
 	boost::mutex::scoped_lock lock(_queueMutex);
-	#endif
 
     mList.push_back(element);
-	#ifdef USE_OPEN_THREADS
-    _queueCondition.signal();
-	#elif USE_BOOST
     _queueCondition.notify_one();
-	#endif
 }
 
-template <class T>
-        void GenericQueue<T>::flush()
+template <class T> void GenericQueue<T>::flush()
 {
-        // Iterate the list
-    for (iterator i = mList.begin();
-         i != mList.end(); i++)
-    {
+    // Iterate the list
+    for (iterator i = mList.begin(); i != mList.end(); i++)
         delete (*i);
-    }
     mList.clear();
 }
 

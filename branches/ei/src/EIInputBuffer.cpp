@@ -38,7 +38,7 @@ ErlTerm* EIInputBuffer::readTerm() throw(EpiDecodeException)
                   "["<<this<<"]" << "EIInputBuffer::readTerm(): ");
 
     // Check if is there are more elements to decode
-    if (*this->getDecodeIndex() == *this->getInternalBufferSize())
+    if (mDecodeIndex == this->getInternalBufferSize())
         return 0;
 
     // check the type of next term:

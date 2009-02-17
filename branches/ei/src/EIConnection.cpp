@@ -52,9 +52,6 @@ namespace ei {
  * delivering them to the receiver of the connection
  */
 class EIMessageAcceptor
-    #ifdef USE_OPEN_THREADS
-    : public OpenThreads::Thread
-    #endif
 {
 public:
     /**
@@ -76,9 +73,7 @@ private:
 
     EIConnection *mConnection;
     bool mThreadExit;
-    #ifdef USE_BOOST
     boost::shared_ptr<boost::thread> m_thread;
-    #endif
 };
 }// ei
 }// epi
@@ -86,13 +81,9 @@ private:
 EIMessageAcceptor::EIMessageAcceptor(EIConnection *connection):
         mConnection(connection), mThreadExit(false)
 {
-    #ifdef USE_OPEN_THREADS
-    start();
-    #elif USE_BOOST
     m_thread = boost::shared_ptr<boost::thread>(
         new boost::thread(boost::bind(&EIMessageAcceptor::run, this))
     );
-    #endif
 }
 
 EIMessageAcceptor::~EIMessageAcceptor()
@@ -102,18 +93,11 @@ EIMessageAcceptor::~EIMessageAcceptor()
 
 void EIMessageAcceptor::stop() {
     mThreadExit = true;
-    #ifdef USE_OPEN_THREADS
-    if (this->isRunning()) {
-        Dout(dc::connect, "["<<this<<"]"<< "EIMessageAcceptor::~EIMessageAcceptor(): joining thread");
-        this->join();
-    }
-    #elif USE_BOOST
     if (m_thread.get()) {
         Dout(dc::connect, "["<<this<<"]"<< "EIMessageAcceptor::~EIMessageAcceptor(): joining thread");
         m_thread->join();
         m_thread.reset();
     }
-    #endif
 }
 
 void EIMessageAcceptor::run() {
@@ -127,11 +111,7 @@ void EIMessageAcceptor::run() {
     std::auto_ptr<EIInputBuffer> buffer;
     EpiMessage *msgResult;
 
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::Mutex& mutex = mConnection->_socketMutex;
-    #elif USE_BOOST
     boost::mutex& mutex = mConnection->_socketMutex;
-    #endif
         
     Socket *socket = mConnection->mSocket;
 
@@ -170,11 +150,8 @@ void EIMessageAcceptor::run() {
                     new EpiEIException("Error in receive", erl_errno));
             // Check if is necesary exit.
             if (erl_errno == EIO) {
-                #ifdef USE_OPEN_THREADS
-                stop();
-                #elif USE_BOOST
+                // stop the thread
                 break;
-                #endif
             }
         } else {
 
@@ -203,9 +180,7 @@ void EIMessageAcceptor::run() {
         mConnection->deliver(this, msgResult);
     }
     Dout(dc::connect, "["<<this<<"]"<< "EIMessageAcceptor:: Thread exit");
-    #ifdef USE_BOOST
     m_thread.reset();
-    #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

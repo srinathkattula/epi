@@ -58,12 +58,17 @@ public:
     static const char* defaultProtocol;
 
     /**
+     * Default cookie
+     */
+    static std::string getDefaultCookie(const std::string& useCookie = "");
+
+    /**
      * Register a factory to a protocol id.
      * @param protocol a string to identify the protocol
      * @param factory the factory to use. Owership is transfered. It will not
      * be deleted util the program exits.
      */
-    static void registerProtocol(const std::string protocol,
+    static void registerProtocol(const std::string& protocol,
                                  ErlangTransportFactory *factory);
 
     /**
@@ -71,14 +76,13 @@ public:
      * the appropiate factory and call the createErlangTransport method
      * @param nodeid string with the node name with the protocol part:
      *  "protocol:nodename@hostname:port"
-     * @param cookie cookie to use
+     * @param cookie cookie to use (default to reading the value from .erlang.cookie file)
      * @throw EpiUnknowProtocol if the protocol is unkown.
      * @throw EpiException if there is an error.
      */
-    static ErlangTransport *
-            createErlangTransport(std::string nodeid, std::string aCookie)
+    static ErlangTransport* createErlangTransport(
+        const std::string& nodeid, const std::string& aCookie = "")
             throw (EpiUnknownProtocol, EpiException);
-
 
 private:
     static ErlangTransportManager *mErlangTransportManagerInstance;
@@ -88,7 +92,11 @@ private:
     /**
      * get singleton instance
      */
-    static ErlangTransportManager &instance();
+    static ErlangTransportManager& instance() {
+        return *(mErlangTransportManagerInstance
+                    ? mErlangTransportManagerInstance
+                    : mErlangTransportManagerInstance = new ErlangTransportManager());
+    }
 
     ErlangTransportManager();
 };

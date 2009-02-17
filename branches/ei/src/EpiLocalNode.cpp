@@ -40,19 +40,7 @@ using namespace epi::util;
 
 //////////////////////////////////////////////////////////////////////////
 // LocalNode
-LocalNode::LocalNode(const std::string aNodeName)
-        throw (EpiBadArgument, EpiConnectionException, EpiException):
-        mCreation(smCreationCounter++)
-{
-    Dout_continue(dc::connect, _continue, " failed.",
-                  "new LocalNode(name="<< aNodeName <<
-                          ", cookie="<< smDefaultCookie <<
-                          ", creation=" << mCreation << ")");
-    init(aNodeName, smDefaultCookie, 0);
-    Dout_finish(_continue, ".");
-}
-
-LocalNode::LocalNode(const std::string aNodeName, const std::string aCookie)
+LocalNode::LocalNode(const std::string& aNodeName, const std::string& aCookie)
         throw (EpiBadArgument, EpiConnectionException, EpiException):
         mCreation(smCreationCounter++)
 {
@@ -64,8 +52,8 @@ LocalNode::LocalNode(const std::string aNodeName, const std::string aCookie)
     Dout_finish(_continue, ".");
 }
 
-LocalNode::LocalNode(const std::string aNodeName,
-                     const std::string aCookie,
+LocalNode::LocalNode(const std::string& aNodeName,
+                     const std::string& aCookie,
                      ErlangTransport *transport)
         throw (EpiBadArgument, EpiConnectionException):
         mCreation(smCreationCounter++)
@@ -84,8 +72,8 @@ LocalNode::~LocalNode() {
     delete mTransport;
 }
 
-void LocalNode::init(const std::string aNodeId,
-                     const std::string aCookie,
+void LocalNode::init(const std::string& aNodeId,
+                     const std::string& aCookie,
                      ErlangTransport *transport)
         throw (EpiException)
 {
@@ -106,7 +94,6 @@ void LocalNode::init(const std::string aNodeId,
     }
 
     initNodeName(mTransport->getNodeName());
-
 }
 
 
@@ -127,12 +114,9 @@ ErlPid* LocalNode::createPid() {
 }
 
 ErlPort* LocalNode::createPort() {
-    ErlPort *newPort =
-            new ErlPort(getNodeName(),mPortCount,getCreation());
+    ErlPort *newPort = new ErlPort(getNodeName(),mPortCount,getCreation());
 
-    mPortCount++;
-
-    if (mPortCount > 0xfffffff) { /* 28 bits */
+    if (++mPortCount > 0xfffffff) { /* 28 bits */
         mPortCount = 0;
     }
 
@@ -141,8 +125,7 @@ ErlPort* LocalNode::createPort() {
 }
 
 ErlRef* LocalNode::createRef() {
-    ErlRef *newRef =
-            new ErlRef(getNodeName(), mRefId, getCreation());
+    ErlRef *newRef = new ErlRef(getNodeName(), mRefId, getCreation());
 
     // increment ref ids (3 ints: 18 + 32 + 32 bits)
     mRefId[0]++;
@@ -158,32 +141,25 @@ ErlRef* LocalNode::createRef() {
     return newRef;
 }
 
-Connection* LocalNode::connect(const std::string node)
-        throw(EpiConnectionException)
-{
-    return mTransport->connect(node);
-}
-
-Connection* LocalNode::connect(const std::string node, const std::string cookie)
-        throw(EpiConnectionException)
+Connection* LocalNode::connect(const std::string& node, const std::string& cookie)
+    throw(EpiConnectionException)
 {
     return mTransport->connect(node, cookie);
 }
 
 Connection* LocalNode::accept(long timeout)
-        throw(EpiConnectionException)
+    throw(EpiConnectionException)
 {
     return mTransport->accept(timeout);
 }
 
-Connection* LocalNode::accept(const std::string cookie, long timeout)
-        throw(EpiConnectionException)
+Connection* LocalNode::accept(const std::string& cookie, long timeout)
+    throw(EpiConnectionException)
 {
     return mTransport->accept(cookie, timeout);
 }
 
-void LocalNode::publishPort()
-        throw (EpiConnectionException)
+void LocalNode::publishPort() throw (EpiConnectionException)
 {
     mTransport->publishPort();
 }
