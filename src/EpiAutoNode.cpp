@@ -26,12 +26,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <set>
 
-#ifdef USE_OPEN_THREADS
-#include <OpenThreads/ScopedLock>
-#elif USE_BOOST
 #include <boost/thread/mutex.hpp>
 #include <boost/bind.hpp>
-#endif
 
 #include "EpiAutoNode.hpp"
 #include "PlainBuffer.hpp"
@@ -62,21 +58,8 @@ int eraseByValue(M &aMap, T &value) {
     return keys.size();
 }
 
-AutoNode::AutoNode( const std::string aNodeName )
-    throw( EpiBadArgument, EpiConnectionException):
-        LocalNode(aNodeName), mThreadExit(false),
-        #ifdef USE_BOOST
-        m_threadRunning(0),
-        #endif
-        _connectionsMutex(), _mailboxesMutex(),
-        _regmailboxesMutex(), _socketMutex(),
-        mMailBoxes(), mConnections(), mRegMailBoxes(),
-        mFlushConnections()
-{
-}
-
-AutoNode::AutoNode( const std::string aNodeName,
-                    const std::string aCookie)
+AutoNode::AutoNode( const std::string& aNodeName,
+                    const std::string& aCookie)
         throw( EpiBadArgument, EpiConnectionException):
         LocalNode(aNodeName, aCookie), mThreadExit(false),
         #ifdef USE_BOOST
@@ -89,9 +72,9 @@ AutoNode::AutoNode( const std::string aNodeName,
 {
 }
 
-AutoNode::AutoNode( const std::string aNodeName,
-                    const std::string aCookie,
-                    ErlangTransport *transport)
+AutoNode::AutoNode( const std::string& aNodeName,
+                    const std::string& aCookie,
+                    ErlangTransport* transport)
         throw( EpiBadArgument, EpiConnectionException):
         LocalNode(aNodeName, aCookie, transport), mThreadExit(false),
         #ifdef USE_BOOST
@@ -105,15 +88,9 @@ AutoNode::AutoNode( const std::string aNodeName,
 }
 
 AutoNode::~AutoNode() {
-#ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock1(_regmailboxesMutex);
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock2(_connectionsMutex);
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock3(_mailboxesMutex);
-#elif USE_BOOST
     boost::mutex::scoped_lock lock1(_regmailboxesMutex);
     boost::mutex::scoped_lock lock2(_connectionsMutex);
     boost::mutex::scoped_lock lock3(_mailboxesMutex);
-#endif
     Dout(dc::connect, "["<<this<<"]"<< "AutoNode::~AutoNode()");
 
     flushConnections();
@@ -144,30 +121,18 @@ void AutoNode::deattachMailBox(MailBox *mailbox) {
     removeMailBox(mailbox);
 }
 
-void AutoNode::registerMailBox(const std::string name, MailBox *mailbox) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_regmailboxesMutex);
-    #elif USE_BOOST
+void AutoNode::registerMailBox(const std::string& name, MailBox *mailbox) {
     boost::mutex::scoped_lock lock(_regmailboxesMutex);
-    #endif
     mRegMailBoxes[name] = mailbox;
 }
 
-void AutoNode::unRegisterMailBox(const std::string name) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_regmailboxesMutex);
-    #elif USE_BOOST
+void AutoNode::unRegisterMailBox(const std::string& name) {
     boost::mutex::scoped_lock lock(_regmailboxesMutex);
-    #endif
     mRegMailBoxes.erase(name);
 }
 
 void AutoNode::unRegisterMailBox(MailBox* mailbox) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_regmailboxesMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_regmailboxesMutex);
-    #endif
     eraseByValue<registered_mailbox_map, std::string,
     MailBox*, std::less<std::string> >(mRegMailBoxes, mailbox);
 }
@@ -181,14 +146,9 @@ void AutoNode::startAcceptor()
         throw (EpiConnectionException)
 {
 	// start the acceptor thread
-    #ifdef USE_OPEN_THREADS
-    start();
-    #elif USE_BOOST
     m_thread = boost::shared_ptr<boost::thread>(
         new boost::thread(boost::bind(&AutoNode::run, this))
     );
-                
-    #endif
 	
 	// Publish the port. Try to publish it, and if it fails, try
 	// to unpublish an publish it.
@@ -202,9 +162,7 @@ void AutoNode::startAcceptor()
 }
 
 void AutoNode::run() {
-    #ifdef USE_BOOST
     m_threadRunning = 1;
-    #endif
     
     #ifdef CWDEBUG
     epi::debug::setThreadDebugMargin();
@@ -253,7 +211,7 @@ void AutoNode::run() {
  *  <- SEND {2,'',#Pid<bingo@aule.1.0>}
  *  {#Ref<bingo@aule.2>,yes}
  */
-bool AutoNode::ping(const std::string remoteNode, long timeout) {
+bool AutoNode::ping(const std::string& remoteNode, long timeout) {
 	if (remoteNode == this->getAliveName() ||	
 		remoteNode == this->getNodeName()) {
 		return true;
@@ -374,8 +332,7 @@ void AutoNode::sendBuf( epi::type::ErlPid* from,
     }
 }
 
-void AutoNode::sendBuf( epi::type::ErlPid* from,
-                        const std::string &to,
+void AutoNode::sendBuf( epi::type::ErlPid* from, const std::string& to,
                         epi::node::OutputBuffer* buffer )
         throw (epi::error::EpiConnectionException)
 {
@@ -384,8 +341,8 @@ void AutoNode::sendBuf( epi::type::ErlPid* from,
 }
 
 void AutoNode::sendBuf( epi::type::ErlPid* from,
-                        const std::string &node,
-                        const std::string &to,
+                        const std::string& node,
+                        const std::string& to,
                         epi::node::OutputBuffer* buffer )
         throw (epi::error::EpiConnectionException)
 {
@@ -419,20 +376,12 @@ void AutoNode::event(EpiObservable* observed, EpiEventTag event) {
 }
 
 void AutoNode::addMailBox(MailBox *mailbox) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mailboxesMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_mailboxesMutex);
-    #endif
     mMailBoxes[mailbox->self()] = mailbox;
 }
 
 MailBox *AutoNode::getMailBox(ErlPid *pid) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_mailboxesMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_mailboxesMutex);
-    #endif
     if (mMailBoxes.count(pid)) {
         return mMailBoxes[pid];
     } else {
@@ -441,11 +390,7 @@ MailBox *AutoNode::getMailBox(ErlPid *pid) {
 }
 
 MailBox *AutoNode::getMailBox(std::string name) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_regmailboxesMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_regmailboxesMutex);
-    #endif
     if (mRegMailBoxes.count(name)) {
         return mRegMailBoxes[name];
     } else {
@@ -464,12 +409,8 @@ void AutoNode::removeMailBox(MailBox *mailbox) {
     _regmailboxesMutex.unlock();
 }
 
-Connection* AutoNode::getConnection(std::string name) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_connectionsMutex);
-    #elif USE_BOOST
+Connection* AutoNode::getConnection(const std::string& name) {
     boost::mutex::scoped_lock lock(_connectionsMutex);
-    #endif
     if (mConnections.count(name)) {
         return mConnections[name];
     } else {
@@ -478,11 +419,7 @@ Connection* AutoNode::getConnection(std::string name) {
 }
 
 void AutoNode::addConnection(Connection* connection) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_connectionsMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_connectionsMutex);
-    #endif
     mConnections[connection->getPeer()->getNodeName()] = connection;
     connection->setReceiver(this);
     // Flush the connections that must be deleted
@@ -490,11 +427,7 @@ void AutoNode::addConnection(Connection* connection) {
 }
 
 void AutoNode::removeConnection(Connection* connection) {
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_connectionsMutex);
-    #elif USE_BOOST
     boost::mutex::scoped_lock lock(_connectionsMutex);
-    #endif
     int count =
             eraseByValue<connection_map, std::string, Connection*, std::less<std::string> >(mConnections, connection);
     // If count>0 => the connection belongs to this node and will be deleted
@@ -509,7 +442,7 @@ void AutoNode::flushConnections() {
     mFlushConnections.clear();
 }
 
-Connection *AutoNode::attempConnection(std::string name)
+Connection *AutoNode::attempConnection(const std::string& name)
         throw (EpiConnectionException)
 {
     Connection *connection = getConnection(name);

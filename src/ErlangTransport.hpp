@@ -42,22 +42,13 @@ class ErlangTransport {
 public:
 
     /**
-     * Set up a connection to an Erlang node, using the default cookie
-     * @param node node name to connect
-     * @returns A new connection. The connection has no receiver defined
-     * and is not started.
-     */
-    virtual Connection* connect(const std::string node)
-            throw(EpiConnectionException) = 0;
-
-    /**
      * Set up a connection to an Erlang node, using other cookie
      * @param node node name to connect
      * @param cookie cookie to use
      * @returns A new connection. The connection has no receiver defined
      * and is not started.
      */
-    virtual Connection* connect(const std::string node, const std::string cookie)
+    virtual Connection* connect(const std::string& node, const std::string& cookie = "")
             throw(EpiConnectionException) = 0;
 
     /**
@@ -79,7 +70,7 @@ public:
      * The connection has no receiver defined and is not started.
      * Returns 0 if timeout
      */
-    virtual Connection* accept(const std::string cookie, long timeout = 0)
+    virtual Connection* accept(const std::string& cookie, long timeout = 0)
             throw(EpiConnectionException) = 0;
 
     /**
@@ -95,7 +86,8 @@ public:
     /**
      * Get the node name for this transport
      */
-    virtual std::string getNodeName() = 0;
+    virtual const std::string& getNodeName() = 0;
+    virtual const std::string& getCookie() = 0;
 
 protected:
 

@@ -19,9 +19,9 @@ pthread_mutex_t cout_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main (int argc, char **args) {
 	
-	if (argc < 4) {
+	if (argc < 3) {
 		std::cout << "Use: " << args[0] << 
-			" <local node name> <remote node name> <cookie>" <<
+			" <local node name> <remote node name> [<cookie>]" <<
 			std::endl;
 		exit(0);
 	}
@@ -50,7 +50,7 @@ int main (int argc, char **args) {
 
     const std::string LOCALNODE(args[1]);
     const std::string REMOTENODE(args[2]);
-    const std::string COOKIE(args[3]);
+    const char* COOKIE = argc >= 4 ? args[3] : "";
 
     int result = 0;
 

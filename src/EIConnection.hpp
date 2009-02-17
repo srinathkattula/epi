@@ -25,15 +25,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #ifndef _EICONNECTION_H
 #define _EICONNECTION_H
 
-#ifdef USE_OPEN_THREADS
-#include "OpenThreads/Thread"
-#include "OpenThreads/Mutex"
-#elif USE_BOOST
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
-#endif
-
-
 #include "Socket.hpp"
 #include "EpiConnection.hpp"
 
@@ -120,11 +113,7 @@ public:
 protected:
     Socket *mSocket;
     EIMessageAcceptor *mAcceptor;
-    #ifdef USE_OPEN_THREADS
-    OpenThreads::Mutex _socketMutex;
-    #elif USE_BOOST
     boost::mutex _socketMutex;
-    #endif
 };
 
 

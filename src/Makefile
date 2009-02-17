@@ -11,17 +11,16 @@ $(warning "ARCHITECTURE:" $(ARCHITECTURE))
 
 #ERL_INTERFACE = /home/qtsw/external/erlang/R12B-4.$(ARCH)/lib/erlang/lib/erl_interface-3.5.8
 ERL_INTERFACE = /sw/external/erlang-R12B-4/$(ARCHITECTURE)/lib/erlang/lib/erl_interface-3.5.8
-BOOST         = /sw/external/boost-1.35.0
-#BOOST         = /sw/external/boost-1.37.0/$(ARCH)
+BOOST         = /sw/external/boost-1.38.0/$(ARCH)
 LIBCWD        = /home/qtsw/lib/libcwd
 LIBDIR        = ../lib.$(ARCHITECTURE)
 OBJDIR        = ../obj.$(ARCHITECTURE)
 
-LDFLAGS = -L$(ERL_INTERFACE)/lib -L$(BOOST)/lib -lei -lpthread -lboost_thread-gcc32-mt
+LDFLAGS = -L$(ERL_INTERFACE)/lib -L$(BOOST)/lib -lei -lpthread $(BOOST)/lib/libboost_thread-gcc32-mt.a
 
 CPPFLAGS = -Wall -DUSE_BOOST -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include
 
-SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp EpiBuffer.cpp \
+SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp \
         EpiMessage.cpp EpiNode.cpp EpiObserver.cpp EpiReceiver.cpp EpiSender.cpp \
         EpiUtil.cpp ErlAtom.cpp ErlBinary.cpp ErlConsList.cpp ErlDouble.cpp \
         ErlEmptyList.cpp ErlList.cpp ErlLong.cpp ErlPid.cpp ErlPort.cpp \
@@ -29,7 +28,7 @@ SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp EpiBuffer.cpp \
         EIOutputBuffer.cpp EITransport.cpp EpiAutoNode.cpp \
         EpiConnection.cpp EpiException.cpp EpiLocalNode.cpp EpiMailBox.cpp \
         ErlVariable.cpp ErlangTransportManager.cpp \
-        GenericQueue.cpp MatchingCommandGuard.cpp PatternMatchingGuard.cpp \
+        MatchingCommandGuard.cpp PatternMatchingGuard.cpp \
         PlainBuffer.cpp Socket.cpp VariableBinding.cpp EIInputBuffer.cpp
 
 ifdef DEBUG

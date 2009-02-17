@@ -23,11 +23,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "Config.hpp"
-
 #include "EIBuffer.hpp"
 
 using namespace epi::ei;
-
 
 EIBuffer::EIBuffer(const bool with_version): mWithVersion(with_version) {
     if (with_version) {
@@ -63,18 +61,4 @@ void EIBuffer::do_resetIndex() {
         int version;
         ei_decode_version(mBuffer.buff, &mBuffer.index, &version);
     }
-}
-
-ei_x_buff* EIBuffer::getBuffer() { return &mBuffer; }
-
-char * EIBuffer::getInternalBuffer() {
-    return mBuffer.buff;
-}
-
-int * EIBuffer::getInternalIndex() {
-    return &(mBuffer.index);
-}
-
-int * EIBuffer::getInternalBufferSize() {
-    return &(mBuffer.buffsz);
 }

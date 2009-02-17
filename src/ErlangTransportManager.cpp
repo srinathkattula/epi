@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #include "Config.hpp"
 
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
 #include "EITransport.hpp"
 #include "ErlangTransportManager.hpp"
 
@@ -37,7 +40,7 @@ ErlangTransportManager::ErlangTransportManager() {
 }
 
 
-void ErlangTransportManager::registerProtocol(const std::string protocol,
+void ErlangTransportManager::registerProtocol(const std::string& protocol,
                                               ErlangTransportFactory *factory)
 {
     if (instance().mFactoryMap.count(protocol) != 0) {
@@ -47,13 +50,12 @@ void ErlangTransportManager::registerProtocol(const std::string protocol,
 }
 
 ErlangTransport *ErlangTransportManager::
-        createErlangTransport(std::string nodeid, std::string cookie)
-        throw (EpiUnknownProtocol, EpiException)
+    createErlangTransport(const std::string& nodeid, const std::string& cookie)
+    throw (EpiUnknownProtocol, EpiException)
 {
-
     std::string protocol;
     std::string nodename;
-
+    
     // Find first the protocol
     std::string::size_type pos = nodeid.find (":",0);
 
@@ -65,25 +67,40 @@ ErlangTransport *ErlangTransportManager::
         nodename = nodeid.substr(pos+1, nodeid.size());
     }
 
-    if (instance().mFactoryMap.count(protocol) == 0) {
+    if (instance().mFactoryMap.count(protocol) == 0)
         throw EpiUnknownProtocol(protocol);
-    }
-    ErlangTransportFactory *factory =
-            instance().mFactoryMap[protocol];
 
-    if (!factory) {
+    ErlangTransportFactory *factory = instance().mFactoryMap[protocol];
+
+    if (!factory)
         throw EpiUnknownProtocol(protocol);
-    }
 
-    return factory->createErlangTransport(nodename, cookie);
-
+    std::string use_cookie = cookie.empty() ? cookie : getDefaultCookie();
+  
+    return factory->createErlangTransport(nodename, use_cookie);
 }
 
+std::string ErlangTransportManager::getDefaultCookie(const std::string& useCookie)
+{
+    if (!useCookie.empty())
+        return useCookie;
 
-
-ErlangTransportManager &ErlangTransportManager::instance() {
-    if (!mErlangTransportManagerInstance) {
-        mErlangTransportManagerInstance = new ErlangTransportManager();
+    std::string cookie;
+    
+    // Read a default cookie from .erlang.cookie file
+    char* home = ::getenv("HOME");
+    if (home) {
+        std::stringstream fname;
+        fname << home;
+        #ifdef _WIN32
+        fname << "\\";
+        #else
+        fname << "/";
+        #endif
+        fname << ".erlang.cookie";
+        std::ifstream fin(fname.str().c_str(), std::ifstream::in);
+        if (fin)
+            std::getline(fin, cookie);
     }
-    return *mErlangTransportManagerInstance;
+    return cookie;
 }

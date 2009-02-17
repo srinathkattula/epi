@@ -44,7 +44,8 @@ public:
      * @param cookie Cookie to use
      * @throw EpiException if there is an error.
      */
-    virtual ErlangTransport *createErlangTransport(std::string nodename, std::string aCookie)
+    virtual ErlangTransport* createErlangTransport(
+        const std::string& nodename, const std::string& aCookie = "")
             throw (EpiException) = 0;
     inline virtual ~ErlangTransportFactory() {}
 };

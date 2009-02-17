@@ -80,7 +80,7 @@ class EITransport;
 class EITransportFactory:  public ErlangTransportFactory {
 public:
     virtual ErlangTransport *
-            createErlangTransport(std::string nodename, std::string aCookie)
+            createErlangTransport(const std::string& nodename, const std::string& aCookie = "")
             throw (EpiException);
     inline virtual ~EITransportFactory() {}
 };
@@ -104,42 +104,39 @@ public:
      * @throws EpiBadArgument if node name is too long
      * @throws EpiConnectionException if there is a network problem
      */
-    EITransport(const std::string aNodeName,
-                const std::string aAliveName,
-                const std::string aHostName,
-                const std::string aCookie,
+    EITransport(const std::string& aNodeName,
+                const std::string& aAliveName,
+                const std::string& aHostName,
+                const std::string& aCookie = "",
                 const int aPort = 0
                )
             throw (EpiBadArgument, EpiConnectionException);
 
-    virtual ~EITransport();
+    virtual ~EITransport() {}
 
-    virtual Connection* connect(const std::string node)
+    Connection* connect(const std::string& node, const std::string& cookie = "")
             throw(EpiConnectionException);
 
-    virtual Connection* connect(const std::string node, const std::string cookie)
+    Connection* accept(long timeout = 0)
             throw(EpiConnectionException);
 
-    virtual Connection* accept(long timeout = 0)
+    Connection* accept(const std::string& cookie, long timeout = 0)
             throw(EpiConnectionException);
 
-    virtual Connection* accept(const std::string cookie, long timeout = 0)
-            throw(EpiConnectionException);
-
-    virtual std::string getNodeName();
+    const std::string& getNodeName() { return mNodeName; }
+    const std::string& getCookie()   { return mCookie; }
 
     /**
      * Publish the node port in the local name server epmd.
      * Set the socket to listen.
      */
-    virtual void publishPort() throw (EpiConnectionException);
+    void publishPort() throw (EpiConnectionException);
 
     /**
      * Unpublish the node port in the local name server epmd.
      * Useful, for example, when epmd has not detected the failure of a node
      */
-    virtual void unPublishPort() throw (EpiConnectionException);
-
+    void unPublishPort() throw (EpiConnectionException);
 
 protected:
 
@@ -154,8 +151,7 @@ protected:
     int mPort;
 
     // Init the node
-    void init(int aPort)
-            throw (EpiConnectionException);
+    void init(int aPort) throw (EpiConnectionException);
 
     /*
      * This flag indicates if the node is listening for incoming connections
@@ -163,23 +159,17 @@ protected:
     bool mListening;
 
     // Check if the node is listening for incoming connections
-    inline bool isListening() const
-    {
-        return mListening;
-    }
+    inline bool isListening() const { return mListening; }
 
     // Set the node to listen the socket
-    void setListening()
-            throw(EpiNetworkException);
+    void setListening() throw (EpiNetworkException);
 
     Socket mSocket;
 
-    Connection* do_connect(const ei_cnode *other_ec, const std::string node)
+    Connection* do_connect(const ei_cnode *other_ec, const std::string& node)
             throw(EpiConnectionException);
     Connection* do_accept(ei_cnode *other_ec, long timeout = 0)
             throw(EpiConnectionException);
-
-
 };
 
 

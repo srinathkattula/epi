@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <sstream>
 
 #include "EITransport.hpp"
+#include "ErlangTransportManager.hpp"
 #include "EIConnection.hpp"
 #include "EpiUtil.hpp"
 
@@ -36,9 +37,9 @@ using namespace epi::error;
 using namespace epi::type;
 using namespace epi::ei;
 
-ErlangTransport *
-        EITransportFactory::createErlangTransport(std::string nodename, std::string aCookie)
-        throw (EpiException)
+ErlangTransport* EITransportFactory::createErlangTransport(
+    const std::string& nodename, const std::string& aCookie)
+    throw (EpiException)
 {
 
     std::string alivename;
@@ -54,10 +55,10 @@ ErlangTransport *
     } else {
         subnodename = nodename.substr(0, pos);
         std::istringstream stream(nodename.substr(pos+1, nodename.size()));
-          stream >> port;
-          if (port < 1024 || port > 65535) {
+        stream >> port;
+        if (port < 1024 || port > 65535) {
             port = 0;
-          }
+        }
     }
 
     pos = subnodename.find ("@",0);
@@ -70,16 +71,17 @@ ErlangTransport *
         hostname = subnodename.substr(pos+1, subnodename.size());
     }
 
-    return new epi::ei::EITransport(alivename+"@"+hostname, alivename,
-                                    hostname, aCookie, port);
+    std::string useCookie = ErlangTransportManager::getDefaultCookie(aCookie);
 
+    return new epi::ei::EITransport(alivename+"@"+hostname, alivename,
+                                    hostname, useCookie, port);
 }
 
 
-EITransport::EITransport( const std::string aNodeName,
-                const std::string aAliveName,
-                const std::string aHostName,
-                const std::string aCookie,
+EITransport::EITransport( const std::string& aNodeName,
+                const std::string& aAliveName,
+                const std::string& aHostName,
+                const std::string& aCookie,
                 const int aPort)
     throw( EpiBadArgument, EpiConnectionException ):
                 mNodeName(aNodeName), mAliveName(aAliveName),
@@ -88,8 +90,7 @@ EITransport::EITransport( const std::string aNodeName,
     init(aPort);
 }
 
-void EITransport::init(int aPort)
-        throw (EpiConnectionException)
+void EITransport::init(int aPort) throw (EpiConnectionException)
 {
     // Open and listen that port
     Dout_continue(dc::connect, _continue, " failed.",
@@ -133,36 +134,33 @@ void EITransport::init(int aPort)
     Dout_finish(_continue, ".");
 }
 
-EITransport::~ EITransport( )
-{
-}
-
-Connection * EITransport::connect( const std::string node )
+Connection* EITransport::connect( const std::string& node,
+                                   const std::string& cookie )
         throw( EpiConnectionException )
 {
-    // Use default cookie
-    return do_connect(ec, node);
-}
+    bool sameCookie = cookie == mCookie;
+    ei_cnode* new_ec;
 
-Connection * EITransport::connect( const std::string node,
-                                   const std::string cookie )
-        throw( EpiConnectionException )
-{
-    // Change cookie
-    ei_cnode *new_ec = epi::util::EiCNodeChangeCookie(ec, cookie);
+    if (!sameCookie)
+        // Change cookie
+        new_ec = epi::util::EiCNodeChangeCookie(ec, cookie);
+    
     Connection *connection= do_connect(ec, node);
-    delete new_ec;
+
+    if (!sameCookie)
+        delete new_ec;
+
     return connection;
 }
 
-Connection * EITransport::accept( long timeout )
+Connection* EITransport::accept( long timeout )
         throw( EpiConnectionException )
 {
     // Use default cookie
     return do_accept(ec, timeout);
 }
 
-Connection * EITransport::accept( const std::string cookie, long timeout )
+Connection* EITransport::accept( const std::string& cookie, long timeout )
         throw( EpiConnectionException )
 {
     // Change cookie
@@ -176,7 +174,7 @@ Connection * EITransport::accept( const std::string cookie, long timeout )
 /*
  * Perform connection using this ei_cnode
  */
-Connection* EITransport::do_connect(const ei_cnode *other_ec, const std::string node)
+Connection* EITransport::do_connect(const ei_cnode *other_ec, const std::string& node)
         throw(EpiConnectionException)
 {
     Dout_continue(dc::connect, _continue, " failed.",
@@ -225,17 +223,11 @@ Connection* EITransport::do_accept(ei_cnode *other_ec, long timeout)
 
     ErlConnect erlConnect;
 
-    Dout_continue(dc::connect, _continue, " failed.",
-                  "EITransport::accept(): ");
+    Dout_continue(dc::connect, _continue, " failed.", "EITransport::accept(): ");
 
     setListening();
 
-	int newSock;
-	
-	newSock = ei_accept_tmo(other_ec, 
-	                    mSocket.getSystemSocket(), 
-					   &erlConnect, 
-					   timeout);
+	int newSock = ei_accept_tmo(other_ec, mSocket.getSystemSocket(), &erlConnect, timeout);
 
     if (newSock < 0) {
     		// EI does not set erl_errno = ETIMEDOUT if there is a timeout,
@@ -258,10 +250,8 @@ Connection* EITransport::do_accept(ei_cnode *other_ec, long timeout)
     return connection;
 }
 
-void EITransport::publishPort()
-        throw (EpiConnectionException)
+void EITransport::publishPort() throw (EpiConnectionException)
 {
-
     int ei_res;
     Dout_continue(dc::connect, _continue, " failed.",
                   "Publishing port "<< mPort << ": ");
@@ -273,7 +263,6 @@ void EITransport::publishPort()
     }
 
     Dout_finish(_continue, " ok.");
-
 }
 
 void EITransport::unPublishPort()
@@ -309,6 +298,3 @@ void EITransport::setListening()
     }
 }
 
-std::string EITransport::getNodeName() {
-    return mNodeName;
-}
