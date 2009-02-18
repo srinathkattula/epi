@@ -135,14 +135,19 @@ private:
             return;
         }
 
-        process_chunk(bytes_transferred);
+        if (bytes_transferred == 0) {
+            // Connection closed
+            return;
+        } else {
+            process_chunk(bytes_transferred);
 
-        m_socket.async_read_some(
-            boost::asio::buffer(m_buffer),
-            boost::bind(&tcp_connection<Handler>::handle_read, shared_from_this(),
-                        boost::asio::placeholders::error,
-                        boost::asio::placeholders::bytes_transferred)
-        );
+            m_socket.async_read_some(
+                boost::asio::buffer(m_buffer),
+                boost::bind(&tcp_connection<Handler>::handle_read, shared_from_this(),
+                            boost::asio::placeholders::error,
+                            boost::asio::placeholders::bytes_transferred)
+            );
+        }
     }
 
     /// Handle completion of a write operation.
@@ -201,12 +206,17 @@ private:
         if (e && e != boost::asio::error::operation_aborted)
             return;
 
-        process_chunk(bytes_transferred);
+        if (bytes_transferred == 0) {
+            // Connection closed
+            return;
+        } else {
+            process_chunk(bytes_transferred);
 
-        m_input.async_read_some(boost::asio::buffer(m_buffer),
-            boost::bind(&pipe_connection<Handler>::handle_read, this,
-                boost::asio::placeholders::error,
-                boost::asio::placeholders::bytes_transferred));
+            m_input.async_read_some(boost::asio::buffer(m_buffer),
+                boost::bind(&pipe_connection<Handler>::handle_read, this,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred));
+        }
     }
 
     posix::stream_descriptor m_input;

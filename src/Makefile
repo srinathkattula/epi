@@ -18,7 +18,7 @@ OBJDIR        = ../obj.$(ARCHITECTURE)
 
 LDFLAGS = -L$(ERL_INTERFACE)/lib -L$(BOOST)/lib -lei -lpthread $(BOOST)/lib/libboost_thread-gcc32-mt.a
 
-CPPFLAGS = -Wall -DUSE_BOOST -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include
+CPPFLAGS = -Wall -g -fPIC -pthread -I$(ERL_INTERFACE)/include -I$(BOOST)/include
 
 SOURCES=ComposedGuard.cpp EIBuffer.cpp EIConnection.cpp \
         EpiMessage.cpp EpiNode.cpp EpiObserver.cpp EpiReceiver.cpp EpiSender.cpp \

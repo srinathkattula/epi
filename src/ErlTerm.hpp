@@ -22,17 +22,19 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ***** END LICENSE BLOCK *****
 */
 
-#ifndef _ERLTERM_H
-#define _ERLTERM_H
+#ifndef _ERL_TERM_H_
+#define _ERL_TERM_H_
 
 #include <string>
 #include <vector>
 #include <memory> 
+#include <ostream>
 
 #include <ei.h>
 #include "EpiError.hpp" 
 #include "ErlTermImpl.hpp"
 #include "putget.h"
+#include "Debug.hpp"
 
 #ifdef _WIN32
 #pragma warning( disable : 4290 )
@@ -281,9 +283,14 @@ public:
      * @return and zero reference counted ErlTerm
      * @throws EpiParseError if the string is incorrect
      */
-     static ErlTerm * format(const char* formatStr, ...)
-               throw (EpiParseError);
+    static ErlTerm * format(const char* formatStr, ...)
+        throw (EpiParseError);
 
+    /**
+     * Generic external binary format term decoder.
+     */
+    static ErlTerm* binary_to_term(const char* buf, int& idx, size_t tot_size)
+        throw (EpiDecodeException);
 private:
 
 protected:
@@ -323,5 +330,10 @@ inline bool operator!=(const ErlTerm &t1, const ErlTerm &t2) {
 } //namespace type
 } //namespace epi
 
+namespace std {
 
+ostream& operator<< (ostream& os, const epi::type::ErlTerm& t);
+ostream& operator<< (ostream& os, const epi::type::ErlTerm* t);
+
+}
 #endif

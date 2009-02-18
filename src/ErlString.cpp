@@ -110,5 +110,7 @@ bool ErlString::equals(const ErlTerm &t) const {
 std::string ErlString::toString(const VariableBinding *binding) const {
     if (!isValid())
         return "** INVALID STRING **";
-    return mString;
+    std::stringstream s;
+    s << '"' << mString << '"';
+    return s.str();
 }
