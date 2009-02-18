@@ -89,5 +89,10 @@ std::string ErlAtom::atomValue() const
 std::string ErlAtom::toString(const VariableBinding *binding) const {
     if (!isValid())
         return "*** INVALID ATOM ***";
-    return mAtom;
+    if (mAtom.empty() || mAtom[0] < 'a' || mAtom[0] > 'z' || mAtom.find(' ') != std::string::npos) {
+        std::stringstream s;
+        s << "'" << mAtom << "'";
+        return s.str();
+    } else 
+        return mAtom;
 }

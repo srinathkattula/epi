@@ -38,25 +38,26 @@ using namespace epi::type;
 ErlBinary::ErlBinary(const char* buf, int* index) 
     throw(EpiEIDecodeException)
 {
-    const char *s = buf + *index;
-    const char *s0 = s;
+    const char *str = buf + *index;
+    const char *s0 = str;
 
-    if (get8(s) != ERL_BINARY_EXT)
+    if (get8(str) != ERL_BINARY_EXT)
         throw EpiEIDecodeException("Error decoding binary", *index);
 
-    long len = get32be(s);
-    mData = new char[len];
+    mSize = get32be(str);
+    mData = new char[mSize];
     if (!mData)
-        throw EpiEIDecodeException("Error decoding binary - out of memory", len);
-    ::memmove(mData,s,len);
+        throw EpiEIDecodeException("Error decoding binary - out of memory", mSize);
+    ::memcpy(mData,str,mSize);
 
-    *index += s + len - s0;
+    *index += str + mSize - s0;
+    mDelete = true;
     mInitialized = true;
 }
 
 void ErlBinary::init(const void *data, const int size,
                 const bool copy, const bool del)
-        throw(EpiAlreadyInitialized)
+    throw(EpiAlreadyInitialized)
 {
 
     if (isValid()) {
@@ -65,19 +66,15 @@ void ErlBinary::init(const void *data, const int size,
 
     // Copy the data if necesary
     mSize=size;
-    char *tmpData;
     if (copy) {
-        tmpData = new char[size];
-        memcpy(tmpData, data, size);
+        mData = new char[size];
+        memcpy(mData, data, size);
     } else {
-        tmpData = (char*) data;
+        mData = (char*) data;
     }
 
-    mData = tmpData;
     mDelete = del;
-
     mInitialized = true;
-
 }
 
 bool ErlBinary::equals(const ErlTerm &t) const {
@@ -89,8 +86,7 @@ bool ErlBinary::equals(const ErlTerm &t) const {
 
 
     ErlBinary *_t = (ErlBinary*) &t;
-    return this->size() == _t->size() &&
-            memcmp(this->binaryData(), _t->binaryData(), this->size())==0;
+    return this->mSize == _t->mSize && memcmp(this->mData, _t->mData, this->mSize)==0;
 }
 
 std::string ErlBinary::toString(const VariableBinding *binding) const {
@@ -98,16 +94,12 @@ std::string ErlBinary::toString(const VariableBinding *binding) const {
         return "** INVALID BINARY **";
 
     std::ostringstream oss;
-    oss << "#Bin<";
-    const char *data = (const char *) this->binaryData();
-    int size = this->size();
-    for(int i=0; i<size; i++) {
-        int v = data[i];
-        oss << v;
-        if (i < size-1) {
+    oss << "<<";
+    for(int i=0; i<mSize; i++) {
+        oss << (unsigned int)mData[i];
+        if (i < mSize-1)
             oss << ',';
-        }
     }
-    oss << ">";
+    oss << ">>";
     return oss.str();
 }

@@ -62,9 +62,7 @@ AutoNode::AutoNode( const std::string& aNodeName,
                     const std::string& aCookie)
         throw( EpiBadArgument, EpiConnectionException):
         LocalNode(aNodeName, aCookie), mThreadExit(false),
-        #ifdef USE_BOOST
         m_threadRunning(0),
-        #endif
         _connectionsMutex(), _mailboxesMutex(),
         _regmailboxesMutex(), _socketMutex(),
         mMailBoxes(), mConnections(), mRegMailBoxes(),
@@ -77,9 +75,7 @@ AutoNode::AutoNode( const std::string& aNodeName,
                     ErlangTransport* transport)
         throw( EpiBadArgument, EpiConnectionException):
         LocalNode(aNodeName, aCookie, transport), mThreadExit(false),
-        #ifdef USE_BOOST
         m_threadRunning(0),
-        #endif
         _connectionsMutex(), _mailboxesMutex(), 
         _regmailboxesMutex(), _socketMutex(),
         mMailBoxes(), mConnections(), mRegMailBoxes(),
@@ -195,10 +191,8 @@ void AutoNode::run() {
     } while(!mThreadExit);
 
     Dout(dc::connect, "["<<this<<"]"<< "AutoNode::run(): Thread exit (" << gettid() << ")");
-    #ifdef USE_BOOST
     m_threadRunning = 0;
     m_thread.reset();
-    #endif
 }
 
 /* internal info about the message formats...

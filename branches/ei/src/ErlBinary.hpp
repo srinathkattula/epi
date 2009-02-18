@@ -40,7 +40,7 @@ public:
     /**
      * Create an unitialized binary
      **/
-    inline ErlBinary(): ErlTerm(), mData((char *) 0) {}
+    ErlBinary(): mData((char *) 0), mDelete(true), mSize(0) {}
 
     /**
      * Create a binary from the given data.
@@ -51,9 +51,9 @@ public:
      * @param copy copy the data or not. Default=true
      * @param copy delete data on destruction or not. Default=true
      **/
-    inline ErlBinary(const void *data, const int size,
-              const bool copy=true, const bool del = true):
-            ErlTerm(), mData((char *) 0) {
+    ErlBinary(const void *data, const int size,
+              const bool copy, const bool del = true):
+            mData((char *) 0) {
         try {
             init(data, size, copy, del);
         } catch (EpiException &) {
@@ -88,12 +88,10 @@ public:
     /**
      * Get the size of the data (in bytes)
      */
-    inline int size() const
-            throw(EpiInvalidTerm)
+    inline int size() const throw(EpiInvalidTerm)
     {
-        if (!isValid()) {
+        if (!isValid())
             throw EpiInvalidTerm("Binary is not initialized");
-        }
         return mSize;
     }
 

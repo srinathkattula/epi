@@ -33,52 +33,6 @@ namespace ei {
 class EIConnection;
 class EIMessageAcceptor;
 
-template <int N = 1024, class Allocator = std::allocator<char> >
-class EiXbuffer: private ei_x_buff
-{
-    char m_stat_buffer[N];
-    Allocator m_alloc;
-public:
-    static const int s_min_size  = N;
-    static const int s_min_alloc = 256;
-
-    EiXbuffer(Allocator& alloc) 
-        : m_alloc(alloc) 
-    {
-        buff   = m_stat_buffer;
-        index  = 0;
-        buffsz = N;
-    }
-
-    ~EiXbuffer()        { reset(); }
-
-    size_t idx()        { return index;  }
-    int*   pidx()       { return &index; }
-    size_t size() const { return buffsz; }
-
-    void reset() {
-        if (buff != m_stat_buffer) {
-            m_alloc.dealocate(buff);
-            buff = m_stat_buffer;
-            buffsz = s_min_size;
-        }
-        index = 0;
-    }
-
-    int realloc(size_t need) {
-        size_t new_sz = index + need;
-        if (new_sz <= (size_t)buffsz)
-            return 0;
-        size_t size = new_sz + s_min_alloc;
-        char* new_buff = m_alloc.allocate(size);
-        if (!new_buff)
-            return -1;
-        memcpy(new_buff, buff, buffsz);
-        buff   = new_buff;
-        buffsz = size;
-    }
-};
-
 /**
  * Implementation of Buffer using EI library
  * It stores a dinamic ei buffer (ei_x_buff)
