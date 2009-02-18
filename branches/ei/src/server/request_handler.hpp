@@ -14,50 +14,55 @@
 #include <string>
 #include <boost/noncopyable.hpp>
 #include "../putget.h"
+#include "request.hpp"
 
 namespace ei {
 namespace server {
 
 /// The common handler for all incoming requests.
-template <class request>
+template <class handler>
 class request_handler : private boost::noncopyable
 {
 public:
+    typedef typename handler::AllocatorT AllocatorT;
+    
     /// Construct with a directory containing files to be served.
-    request_handler()
-        : m_len(0)
+    request_handler(handler& h)
+        : m_handler(h)
+        , m_request(h.allocator())
+        , m_len(0)
         , m_offset(0)
     {}
 
-    /// Handle a request and produce a reply.
-    void handle_request(const request& req);
+    /// Handle a request by calling handler.handle_message(msg, size)
+    void handle_request();
 
     /// Parse some data. The bool return value is true when a complete request
     /// has been parsed, false when more data is required. The <data> and <len> 
     /// return value indicates how much of the input has been consumed.
-    bool parse(request& req, char*& data, size_t& len);
+    bool parse(char*& data, size_t& len);
 
     /// Reset to initial parser state.
     void reset() { m_len = m_offset = 0; }
 
+    request<AllocatorT>& request() { return m_request; }
 private:
+    handler& m_handler;
+    ei::server::request<AllocatorT> m_request;
     size_t m_len, m_offset;
     char   m_temp_buf[8];
 };
 
 
-template <class request>
-void request_handler<request>::handle_request(const request& req)
+template <class T>
+void request_handler<T>::handle_request()
 {
-    std::string request_path;
-    boost::shared_array<char> buffer = req.buffer();
-    std::cout << "New request of size: " << req.size() << " (offset: " << req.offset() << ")" << std::endl;
-    std::cout << "  use_count: " << buffer.use_count() << std::endl;
-    std::cout << "  Msg: " << buffer.get() << std::endl;
+    boost::shared_array<char> buffer = m_request.buffer();
+    m_handler.handle_message(buffer.get(), m_request.size());
 }
 
-template <class request>
-bool request_handler<request>::parse(request& req, char*& data, size_t& len)
+template <class T>
+bool request_handler<T>::parse(char*& data, size_t& len)
 {
     if (m_len == 0) {
         int sz = std::min(4 - m_offset, len);
@@ -72,15 +77,15 @@ bool request_handler<request>::parse(request& req, char*& data, size_t& len)
             const char* s = m_temp_buf;
             m_len    = get32be(s);
             m_offset = 0;
-            req.init(m_len, data, len);
+            m_request.init(m_len, data, len);
         } else {
             return false;
         }
     } else {
-        req.copy(data, len);
+        m_request.copy(data, len);
     }
 
-    bool result = req.full();
+    bool result = m_request.full();
 
     if (result)
         m_len = 0;
