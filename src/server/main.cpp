@@ -16,9 +16,20 @@
 #include "server.hpp"
 #include "request.hpp"
 
-typedef ei::server::request< std::allocator<char> > RequestT;
-
 using namespace ei::server;
+
+struct StdHandler {
+    typedef std::allocator<char> AllocatorT;
+
+    void handle_message(const char* msg, size_t size) {
+        std::cout << "New request of size: " << size << std::endl;
+        std::cout << "  Msg: " << msg << std::endl;
+    }
+    
+    AllocatorT& allocator() { return m_allocator; }
+private:
+    AllocatorT m_allocator;
+};
 
 #if defined(_WIN32)
 
@@ -78,6 +89,8 @@ int main(int argc, char* argv[])
     std::string addr("0.0.0.0");
     std::string port;
     
+    StdHandler handler;
+    
     try
     {
         // Check command line arguments.
@@ -105,19 +118,19 @@ int main(int argc, char* argv[])
 
         // Initialise server.
         if (use_pipe) {
-            pipe_server<RequestT> s(3, 4);
+            pipe_server<StdHandler> s(handler, 3, 4);
 
             // Set console control handler to allow server to be stopped.
-            console_ctrl_function = boost::bind(&pipe_server<RequestT>::stop, &s);
+            console_ctrl_function = boost::bind(&pipe_server<StdHandler>::stop, &s);
             SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
 
             // Run the server until stopped.
             s.run();
         } else {
-            tcp_server<RequestT> s(addr, port);
+            tcp_server<StdHandler> s(handler, addr, port);
 
             // Set console control handler to allow server to be stopped.
-            console_ctrl_function = boost::bind(&tcp_server<RequestT>::stop, &s);
+            console_ctrl_function = boost::bind(&tcp_server<StdHandler>::stop, &s);
             SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
 
             // Run the server until stopped.
@@ -129,8 +142,8 @@ int main(int argc, char* argv[])
         
         if (use_pipe) {
             // Run server in background thread.
-            pipe_server<RequestT> s(3, 4);
-            boost::thread t(boost::bind(&pipe_server<RequestT>::run, &s));
+            pipe_server<StdHandler> s(handler, 3, 4);
+            boost::thread t(boost::bind(&pipe_server<StdHandler>::run, &s));
 
             restore_sig_and_wait(old_mask);
             
@@ -139,8 +152,8 @@ int main(int argc, char* argv[])
             t.join();
         } else {
             // Run server in background thread.
-            tcp_server<RequestT> s(addr, port);
-            boost::thread t(boost::bind(&tcp_server<RequestT>::run, &s));
+            tcp_server<StdHandler> s(handler, addr, port);
+            boost::thread t(boost::bind(&tcp_server<StdHandler>::run, &s));
 
             restore_sig_and_wait(old_mask);
             

@@ -36,15 +36,13 @@ namespace posix = boost::asio::posix;
 //------------------------------------------------------------------------------
 
 /// Represents a single connection from a client.
-template <typename Request>
+template <typename Handler>
 class connection
     : private boost::noncopyable
 {
 public:
-    typedef connection<Request> ConnectionT;
-    typedef Request             RequestT;
-
-    enum ConnType { TCP_CONNECTION, PIPE_CONNECTION };
+    typedef connection<Handler> ConnectionT;
+    typedef Handler             HandlerT;
 
     virtual ~connection() {}
     
@@ -56,13 +54,8 @@ public:
 
 protected:
     /// Construct a connection
-    connection(
-        request_handler<Request>& handler,
-        ConnType conn_type,
-        typename Request::AllocatorT& allocator
-    ) : m_request_handler(handler)
-      , m_request(allocator)
-      , m_conn_type(conn_type)
+    connection( request_handler<Handler>& handler)
+        : m_request_handler(handler)
     {}
 
     /// Handle completion of a read operation.
@@ -70,37 +63,33 @@ protected:
         char* data = m_buffer.data();
 
         while (bytes_transferred > 0) {
-            if (m_request_handler.parse(m_request, data, bytes_transferred)) {
-                m_request_handler.handle_request(m_request);
+            if (m_request_handler.parse(data, bytes_transferred)) {
+                m_request_handler.handle_request();
             }
         }
     }
 
     /// The handler used to process the incoming request.
-    request_handler<Request>& m_request_handler;
+    request_handler<Handler>& m_request_handler;
     /// Buffer for incoming data.
     boost::array<char, 8192>  m_buffer;
-    /// The incoming request.
-    Request                   m_request;
-    ConnType                  m_conn_type;
 };
 
 //------------------------------------------------------------------------------
 // tcp_connection class
 //------------------------------------------------------------------------------
-template <typename Request>
+template <typename Handler>
 class tcp_connection
-    : public connection<Request>
-    , public boost::enable_shared_from_this< tcp_connection<Request> >
+    : public connection<Handler>
+    , public boost::enable_shared_from_this< tcp_connection<Handler> >
 {
 public:
-    typedef connection<Request> BaseT;
+    typedef connection<Handler> BaseT;
     
     tcp_connection(boost::asio::io_service& io_service,
-        connection_manager< tcp_connection<Request> >& manager, 
-        request_handler<Request>& handler,
-        typename Request::AllocatorT& allocator)
-    : connection<Request>(handler, TCP_CONNECTION, allocator)
+        connection_manager< tcp_connection<Handler> >& manager, 
+        request_handler<Handler>& handler)
+    : connection<Handler>(handler)
     , m_connection_manager(manager)
     , m_socket(io_service)
     {}
@@ -118,7 +107,7 @@ public:
                     << m_peer_endpoint.address() << ":" << m_peer_endpoint.port());
         }
         m_socket.async_read_some(boost::asio::buffer(m_buffer),
-            boost::bind(&tcp_connection<Request>::handle_read, shared_from_this(),
+            boost::bind(&tcp_connection<Handler>::handle_read, shared_from_this(),
                 boost::asio::placeholders::error,
                 boost::asio::placeholders::bytes_transferred));
     }
@@ -131,7 +120,7 @@ public:
 
 private:
     /// The manager for this connection.
-    connection_manager< tcp_connection<Request> >& m_connection_manager;
+    connection_manager< tcp_connection<Handler> >& m_connection_manager;
     /// Socket for the connection.
     boost::asio::ip::tcp::socket     m_socket;
     boost::asio::ip::tcp::endpoint   m_peer_endpoint;
@@ -150,7 +139,7 @@ private:
 
         m_socket.async_read_some(
             boost::asio::buffer(m_buffer),
-            boost::bind(&tcp_connection<Request>::handle_read, shared_from_this(),
+            boost::bind(&tcp_connection<Handler>::handle_read, shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred)
         );
@@ -172,18 +161,16 @@ private:
 //------------------------------------------------------------------------------
 // pipe_connection class
 //------------------------------------------------------------------------------
-template <typename Request>
-class pipe_connection
-    : public connection<Request>
+template <typename Handler>
+class pipe_connection : public connection<Handler>
 {
 public:
-    typedef connection<Request> BaseT;
+    typedef connection<Handler> BaseT;
 
     pipe_connection(boost::asio::io_service& io_service,
-        request_handler<Request>& handler,
-        int in_fd, int out_fd,
-        typename Request::AllocatorT& allocator)
-    : connection<Request>(handler, PIPE_CONNECTION, allocator)
+        request_handler<Handler>& handler,
+        int in_fd, int out_fd)
+    : connection<Handler>(handler)
     , m_input (io_service, ::dup(in_fd))
     , m_output(io_service, ::dup(out_fd))
     {}
@@ -197,7 +184,7 @@ public:
     void start() {
         DBG("New pipe connection established"); 
         m_input.async_read_some(boost::asio::buffer(m_buffer),
-            boost::bind(&pipe_connection<Request>::handle_read, this,
+            boost::bind(&pipe_connection<Handler>::handle_read, this,
                 boost::asio::placeholders::error,
                 boost::asio::placeholders::bytes_transferred));
     }
@@ -217,7 +204,7 @@ private:
         process_chunk(bytes_transferred);
 
         m_input.async_read_some(boost::asio::buffer(m_buffer),
-            boost::bind(&pipe_connection<Request>::handle_read, this,
+            boost::bind(&pipe_connection<Handler>::handle_read, this,
                 boost::asio::placeholders::error,
                 boost::asio::placeholders::bytes_transferred));
     }

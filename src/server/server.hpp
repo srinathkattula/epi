@@ -21,16 +21,17 @@ namespace ei {
 namespace server {
 
 /// The top-level class of the HTTP server.
-template<class Request>
+template<class Handler>
 class server : private boost::noncopyable
 {
 public:
-    typedef Request RequestT;
+    typedef Handler HandlerT;
 
     /// Construct the server to listen on the specified TCP address and port, and
     /// serve up files from the given directory.
-    server()
+    server(Handler& h)
         : m_io_service()
+        , m_request_handler(h)
     {}
 
     virtual ~server() {}
@@ -58,28 +59,29 @@ protected:
     /// The io_service used to perform asynchronous operations.
     boost::asio::io_service         m_io_service;
     /// The handler for all incoming requests.
-    request_handler<Request>        m_request_handler;
+    request_handler<Handler>        m_request_handler;
 
-    typename RequestT::AllocatorT   m_allocator;
+    typename HandlerT::AllocatorT   m_allocator;
 };
 
 
 /// The TCP server.
-template<class Request>
-class tcp_server : public server< Request >
+template<class Handler>
+class tcp_server : public server< Handler >
 {
 public:
-    typedef server< Request > BaseT;
+    typedef server< Handler > BaseT;
 
     /// Construct the server to listen on the specified TCP address and port, and
     /// serve up files from the given directory.
-    tcp_server(const std::string& address, const std::string& port)
-        : m_connection_manager()
+    tcp_server(Handler& h, const std::string& address, const std::string& port)
+        : BaseT(h)
+        , m_connection_manager()
         , m_acceptor(m_io_service)
         , m_new_connection(
-            new tcp_connection<Request>(
+            new tcp_connection<Handler>(
                 m_io_service, m_connection_manager, 
-                m_request_handler, m_allocator))
+                m_request_handler))
     {
         // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
         boost::asio::ip::tcp::resolver resolver(m_io_service);
@@ -90,27 +92,27 @@ public:
         m_acceptor.bind(endpoint);
         m_acceptor.listen();
         m_acceptor.async_accept(m_new_connection->socket(),
-            boost::bind(&tcp_server<Request>::handle_accept, this, boost::asio::placeholders::error));
+            boost::bind(&tcp_server<Handler>::handle_accept, this, boost::asio::placeholders::error));
     }
 
 private:
     /// The connection manager which owns all live connections.
-    connection_manager< tcp_connection<Request> >  m_connection_manager;
+    connection_manager< tcp_connection<Handler> >  m_connection_manager;
     /// Acceptor used to listen for incoming connections.
     boost::asio::ip::tcp::acceptor  m_acceptor;
     /// The next connection to be accepted.
-    typename connection_manager< tcp_connection<Request> >::connection_ptr m_new_connection;
+    typename connection_manager< tcp_connection<Handler> >::connection_ptr m_new_connection;
 
     /// Handle completion of an asynchronous accept operation.
     void handle_accept(const boost::system::error_code& e) {
         if (!e) {
             m_connection_manager.start(m_new_connection);
             m_new_connection.reset(
-                new tcp_connection<Request>(
+                new tcp_connection<Handler>(
                     m_io_service, m_connection_manager, 
-                    m_request_handler, m_allocator));
+                    m_request_handler));
             m_acceptor.async_accept(m_new_connection->socket(),
-                boost::bind(&tcp_server<Request>::handle_accept, this, boost::asio::placeholders::error));
+                boost::bind(&tcp_server<Handler>::handle_accept, this, boost::asio::placeholders::error));
         }
     }
 
@@ -126,16 +128,17 @@ private:
 
 
 /// The PIPE server
-template<class Request>
-class pipe_server : public server<Request>
+template<class Handler>
+class pipe_server : public server<Handler>
 {
 public:
-    typedef server<Request> BaseT;
+    typedef server<Handler> BaseT;
 
     /// Construct the server to listen on the specified TCP address and port, and
     /// serve up files from the given directory.
-    pipe_server(int fd_in, int fd_out)
-        : m_pipe_connection(m_io_service, m_request_handler, fd_in, fd_out, m_allocator)
+    pipe_server(Handler& h, int fd_in, int fd_out)
+        : BaseT(h)
+        , m_pipe_connection(m_io_service, m_request_handler, fd_in, fd_out)
     {
         m_pipe_connection.start();
     }
@@ -144,7 +147,7 @@ public:
         m_pipe_connection.stop();
     }
 private:
-    pipe_connection<Request> m_pipe_connection;
+    pipe_connection<Handler> m_pipe_connection;
 };
 
 } // namespace server

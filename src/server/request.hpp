@@ -20,7 +20,7 @@ namespace ei {
 namespace server {
 
 /// A request received from a client.
-template <class Allocator = std::allocator<char> >
+template <class Allocator>
 class request
 {
 private:
@@ -45,7 +45,6 @@ private:
     
 public:
     typedef Allocator AllocatorT;
-
 
     request(Allocator& alloc) 
         : m_allocator(alloc)
