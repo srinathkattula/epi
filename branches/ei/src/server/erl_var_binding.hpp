@@ -27,11 +27,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <map>
 
-#include "ErlTerm.hpp"
-#include "ErlTermPtr.hpp"
+#include "erl_term.hpp"
 
-namespace epi {
-namespace type {
+namespace ei {
 
 class ErlTerm;
 
@@ -40,35 +38,34 @@ std::ostream& operator<< (std::ostream &out, VariableBinding &binding);
 class VariableBinding {
     friend std::ostream& epi::type::operator<< (std::ostream &out, VariableBinding &binding);
 protected:
-    typedef std::map<std::string, ErlTermPtr<ErlTerm> > ErlTermMap;
+    typedef std::map<std::string, boost::shared_ptr<ErlTerm> > ErlTermMap;
 
 public:
-    inline VariableBinding():mErlTermMap()  {}
+    VariableBinding():mErlTermMap()  {}
 
 	 /**
 	  * Bind a value to a variable name. The binding will be updated
 	  * id variableName is unbound. If its bound, it will ignore the new
-     * value
+      * value
 	  * @param variableName
 	  * @param term ErlTerm to bind. Should be != 0.
-     */
-	 inline void bind( const std::string& variableName, ErlTerm* term ) {
+      */
+	 void bind( const std::string& variableName, ErlTerm* term ) {
         // bind only if is unbound
-        if (mErlTermMap.count(variableName) == 0) {
+        if (mErlTermMap.find(variableName) == mErlTermMap.end())
             mErlTermMap[variableName] = term;
-        }
-    }
+     }
 
 	 /**
 	  * Search for a variable by name
 	  * @param variableName variable to search
-     * @return bound ErlTerm pointer if variable is bound, 0 otherwise
-     */
+      * @return bound ErlTerm pointer if variable is bound, 0 otherwise
+      */
 
-	 inline ErlTerm* search( const std::string& variableName ) const {
-        ErlTermMap::const_iterator p = mErlTermMap.find(variableName);
+	 ErlTerm* search( const std::string& variableName ) const {
+         ErlTermMap::const_iterator p = mErlTermMap.find(variableName);
 
-        return p == mErlTermMap.end() ? 0 : (*p).second.get();
+         return p == mErlTermMap.end() ? 0 : p->second.get();
     }
 
 	/**
@@ -76,18 +73,18 @@ public:
 	 * variable binding.
      * @param binding pointer to binding to use.
      */
-    inline void merge( VariableBinding *binding ) {
+    void merge( VariableBinding *binding ) {
         for (ErlTermMap::const_iterator it = binding->mErlTermMap.begin(), end=binding->mErlTermMap.end();
              it != end; ++it)
         {
-            bind((*it).first, (*it).second.get());
+            bind(it->first, it->second.get());
         }
     }
 
 	/**
 	 * Reset this binding 
 	 */
-	inline void reset() {
+	void reset() {
 		mErlTermMap.clear();
 	}
 	
@@ -96,8 +93,7 @@ protected:
 };
 
 
-} // type
-} // epi
+} // ei
 
 
 #endif

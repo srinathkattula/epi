@@ -27,8 +27,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "ErlTerm.hpp"
 
-namespace epi {
-namespace type {
+namespace ei {
 
 
 /**
@@ -39,53 +38,37 @@ namespace type {
  * If you use '_' as variable, it will allways succes in matching, but
  * it will not be bind.
  **/
-class ErlVariable: public ErlTerm {
-
+class ErlVariable: public ErlTerm
+{
 public:
     /**
      * Create a new anonymous variable
      */
-    inline ErlVariable(): ErlTerm(), mName("_") {
-        mInitialized = true;
-    }
+    ErlVariable(): ErlTerm(ERL_VARIABLE), mName("_") {}
+
     /**
      * Create a new variable. If you use "_" as name, it will be an
      * anonymous variable
      */
-    inline ErlVariable( const std::string& name ): ErlTerm(), mName(name) {
-        mInitialized = true;
-    }
+    ErlVariable( const std::string& name ): ErlTerm(), mName(name) {}
 
-    inline std::string getName( ) {
-        return mName;
-    }
-
-    inline bool equals(const ErlTerm &t) const {
-        return false;
-    }
-
-    std::string toString(const VariableBinding *binding = 0) const;
-
+    std::string  getName()                  const { return mName; }
+    bool         equals(const ErlTerm &t)   const { return false; }
+    std::string  toString(const VariableBinding *binding = 0) const;
     ErlVariable* searchUnbound(const VariableBinding* binding);
 
     ErlTerm* subst(const VariableBinding* binding)
-            throw (EpiInvalidTerm, EpiVariableUnbound);
-
-    IMPL_TYPE_SUPPORT(ErlVariable, ERL_VARIABLE);
+        throw (EpiInvalidTerm, EpiVariableUnbound);
 
 private:
-
     std::string mName;
 
 protected:
-
     bool internalMatch(VariableBinding* binding, ErlTerm* pattern)
             throw (EpiVariableUnbound);
-
 };
 
-} // type
-} // epi
+} // ei
 
 
 #endif

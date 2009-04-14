@@ -7,4 +7,10 @@
 #define DBG( x )
 #endif
 
+#ifdef SRV_TRACE
+#define Dout( x, y ) std::cout << x << ": " << y << '(' << __FILE__ << ':' << __LINE__ << ')' << std::endl;
+#else
+#define Dout( x, y )
+#endif
+
 #endif
